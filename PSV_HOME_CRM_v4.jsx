@@ -2525,7 +2525,7 @@ export default function App(){
   // ── Load data: thử đọc từ storage trước, fallback về INIT_STATE ──────────
   const [S,dispatch]=useState(()=>{
     try {
-      const raw = sessionStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(SAVE_KEY);
       if (raw) { const parsed = JSON.parse(raw); if (parsed?.deals) return parsed; }
     } catch(e) {}
     return INIT_STATE;
@@ -2533,8 +2533,8 @@ export default function App(){
 
   const disp=useCallback((action)=>dispatch(s=>{
     const next=reducer(s,action);
-    // Auto-save vào sessionStorage sau mỗi action
-    try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(next)); } catch(e){}
+    // Auto-save vào localStorage sau mỗi action
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(next)); } catch(e){}
     return next;
   }),[]);
 
@@ -2591,7 +2591,7 @@ export default function App(){
         const parsed=JSON.parse(ev.target.result);
         if(!parsed?.deals||!parsed?.dealers) throw new Error("File không hợp lệ");
         dispatch(parsed);
-        try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(parsed)); } catch(e){}
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(parsed)); } catch(e){}
         toast(`✅ Đã load data: ${parsed.deals.length} deals, ${parsed.dealers.length} đại lý`);
         setShowDataPanel(false);
       } catch(err) { toast("❌ File lỗi — không đọc được data","danger"); }
@@ -2604,7 +2604,7 @@ export default function App(){
   const resetData=()=>{
     if(!confirm("Reset về data mẫu? Toàn bộ data hiện tại sẽ mất!")) return;
     dispatch(INIT_STATE);
-    try { sessionStorage.removeItem(SAVE_KEY); } catch(e){}
+    try { localStorage.removeItem(SAVE_KEY); } catch(e){}
     toast("🔄 Đã reset về data mẫu");
     setShowDataPanel(false);
   };
@@ -2860,8 +2860,8 @@ export default function App(){
               <div style={{background:D.grL,border:`1px solid ${D.gr}`,borderRadius:12,padding:"12px 16px",display:"flex",gap:10,alignItems:"center"}}>
                 <span style={{fontSize:20}}>✅</span>
                 <div>
-                  <div style={{fontWeight:700,fontSize:13,color:D.gr}}>Tự động lưu đang bật</div>
-                  <div style={{fontSize:11,color:D.grD,marginTop:2}}>Mọi thay đổi được lưu tự động trong phiên làm việc này. Đóng tab sẽ mất — dùng Export để backup.</div>
+                  <div style={{fontWeight:700,fontSize:13,color:D.gr}}>Tự động lưu đang bật (localStorage)</div>
+                  <div style={{fontSize:11,color:D.grD,marginTop:2}}>Mọi thay đổi được lưu tự động trên trình duyệt này, <b>không mất khi đóng/mở lại</b>. Nên Export định kỳ để backup & chia sẻ.</div>
                 </div>
               </div>
 

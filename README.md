@@ -47,5 +47,34 @@ npm run preview  # xem thử bản đã build
 
 ## Dữ liệu
 
-App dùng dữ liệu mẫu (seed) trong `PSV_HOME_CRM_v4.jsx` và lưu thay đổi trong trình duyệt.
-Dùng nút **Export / Import (.json)** trong app để sao lưu và khôi phục dữ liệu thực tế.
+App lưu mọi thay đổi vào **localStorage** của trình duyệt — **không mất khi đóng/mở lại**.
+Dùng nút **Export / Import (.json)** trong app để sao lưu định kỳ & chia sẻ dữ liệu giữa các máy/thiết bị.
+
+> Lưu ý: localStorage gắn theo **từng trình duyệt + từng máy**. Muốn đồng bộ nhiều máy → Export rồi Import.
+
+---
+
+## 🌐 Dùng hằng ngày (không cần Node)
+
+Có 2 cách dùng app thật, không cần dev server:
+
+### 1) File HTML đơn — `PSV_HOME_CRM.html`
+Một file duy nhất (~800KB) đã gói sẵn toàn bộ app. **Double-click mở bằng Chrome/Edge là dùng được ngay**,
+chạy offline, dữ liệu lưu trong trình duyệt. Có thể copy file này sang máy khác / USB / Drive.
+
+Build lại file này sau khi sửa code:
+```bash
+# Windows PowerShell
+$env:SINGLE="1"; npm run build      # → dist/index.html (đổi tên thành PSV_HOME_CRM.html)
+```
+
+### 2) Web online — GitHub Pages (truy cập qua link)
+Đã cấu hình deploy tự động (`.github/workflows/deploy.yml`). Mỗi lần `git push`, app tự build & lên web.
+
+**Bật 1 lần:** vào repo trên GitHub → **Settings → Pages → Source: GitHub Actions** → Save.
+Sau đó link sẽ là: **https://psvhomecpy-cmd.github.io/Sale-CRM-psv/**
+
+```bash
+npm run build   # build thường (local)
+# GHPAGES=1 npm run build   # build cho Pages (CI tự đặt env này)
+```
