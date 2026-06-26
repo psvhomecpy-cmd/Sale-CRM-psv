@@ -30,7 +30,8 @@ const dAgo = n => { const d=new Date(now); d.setDate(d.getDate()-n); return d.to
 const dFwd = n => { const d=new Date(now); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 const fmt  = n => n>=1000?`${(n/1000).toFixed(1)}tỷ`:`${n}M`;
 const vnd  = n => (n||0).toLocaleString("vi-VN");
-const matByCode = c => MATERIALS.find(m=>m.code===c);
+let LIVE_MATERIALS = MATERIALS;   // danh sách vật tư động (App đồng bộ từ state.materials)
+const matByCode = c => LIVE_MATERIALS.find(m=>m.code===c);
 const fmtK = n => n>=1000?`${(n/1000).toFixed(0)}k`:n;
 const daysDiff = s => s ? Math.floor((now-new Date(s))/86400000) : 0;
 const newId = arr => arr.length ? Math.max(...arr.map(x=>x.id))+1 : 1;
@@ -105,6 +106,34 @@ const DELIVERIES = [
   {id:7,code:"GH-007",dealerId:5,orderCode:"",address:"Ninh Kiều, Cần Thơ",region:"Cần Thơ",zone:"Miền Nam",product:"AOK-AM45S ×6",qty:6,carrier:"Khách tự lấy",date:dFwd(3),slot:"Chiều (13–17h)",status:"preparing",note:"Đại lý cử người tới kho lấy"},
 ];
 
+const CUSTOMERS = [
+  {id:1, code:"L-HOANGKIMHY",    name:"Rèm Hoàng Kim - Hưng Yên",                 address:"Thôn Lại Ốc, Huyện Văn Giang, Tỉnh Hưng Yên",                          phone:"0976641334", district:"Văn Giang", province:"Hưng Yên"},
+  {id:2, code:"HU-PHUONGLINH",   name:"Rèm Phương Linh",                          address:"227 Nguyễn Thị Minh Khai, TP Bắc Giang",                               phone:"0913335222", district:"TP",        province:"Bắc Giang"},
+  {id:3, code:"HU-CHARM",        name:"Rèm Charmdecor",                           address:"Số 6 ngõ 10 Lưu Quang Vũ, Quận Cầu Giấy, TP Hà Nội",                    phone:"0982868672", district:"Cầu Giấy",  province:"Hà Nội"},
+  {id:4, code:"HU-HUONGTHAOBN",  name:"Rèm Hương Thảo Bắc Ninh",                  address:"Xóm Mận Xã, Xã Mão Điền, Huyện Thuận Thành, Tỉnh Bắc Ninh",             phone:"0382988266", district:"Thuận Thành",province:"Bắc Ninh"},
+  {id:5, code:"L-HDDUONGNOI",    name:"Rèm HD Dương Nội Hà Đông",                 address:"39-D9 Khu D, KĐT Geleximco Lê Trọng Tấn, Dương Nội, Hà Đông, Hà Nội",   phone:"0934252364", district:"Hà Đông",   province:"Hà Nội"},
+  {id:6, code:"L-HOANMYQN",      name:"Rèm Hoàn Mỹ - Móng Cái QN",                address:"22 Đại Lộ Hòa Bình, Phường Trần Phú, TP Móng Cái, Quảng Ninh",          phone:"0985802383", district:"Móng Cái",  province:"Quảng Ninh"},
+  {id:7, code:"L-THUHOALONGBIEN",name:"Rèm Thu Hòa Long Biên",                    address:"104 Phố Hồng Tiến, Lâm Du, Bồ Đề, Long Biên, Hà Nội",                   phone:"0976487889", district:"Long Biên", province:"Hà Nội"},
+  {id:8, code:"L-THAOUYENQN",    name:"Rèm Thảo Uyên - Hạ Long QN",               address:"230 Cao Xanh, TP Hạ Long, Quảng Ninh",                                 phone:"0974762388", district:"Hạ Long",   province:"Quảng Ninh"},
+  {id:9, code:"L-GIAPHT",        name:"Rèm Giáp Roger Hà Tĩnh",                   address:"16/135 Lê Duẩn, Phường Hà Huy Tập, Thành Phố Hà Tĩnh",                  phone:"0917001888", district:"TP",        province:"Hà Tĩnh"},
+  {id:10,code:"L-AUTOREM",       name:"Rèm Auto Rèm - Nha Trang",                 address:"86 Đường 23/10 Phường Phương Sài, Thành Phố Nha Trang, Khánh Hòa",      phone:"0839000018", district:"Nha Trang", province:"Khánh Hòa"},
+  {id:11,code:"L-THAINGOCTN",    name:"Rèm Thái Ngọc - Thái Nguyên",              address:"Phường Chùa Hang, Thành Phố Thái Nguyên",                              phone:"0969779998", district:"TP",        province:"Thái Nguyên"},
+  {id:12,code:"L-HUYENHAUVP",    name:"Rèm Huyền Hậu - Vĩnh Phúc",                address:"NP3-11 Lý Nam Đế, Vĩnh Yên, Vĩnh Phúc",                                phone:"0356613096", district:"Vĩnh Yên",  province:"Vĩnh Phúc"},
+  {id:13,code:"L-HOANGTUANQN",   name:"Rèm Hoàng Tuấn - Móng Cái Quảng Ninh",     address:"180 Nguyễn Văn Cừ, Ka Long Móng Cái, Quảng Ninh",                       phone:"0986533883", district:"Móng Cái",  province:"Quảng Ninh"},
+  {id:14,code:"L-QUANCURTAINHN", name:"Rèm Quân Curtain - Hà Nội",                address:"AT08 - Khu Ụ Pháo, An Thượng, Hoài Đức, Hà Nội",                        phone:"0904686883", district:"Hoài Đức",  province:"Hà Nội"},
+];
+
+const QUOTES = [
+  {id:1,code:"BG-2026-001",date:dAgo(2),custName:"Rèm Hoàng Kim - Hưng Yên",custCode:"L-HOANGKIMHY",custAddr:"Thôn Lại Ốc, Văn Giang, Hưng Yên",custPhone:"0976641334",deliveryAddress:"Công trình Anh Linh, Long Biên",dealerId:1,discountPct:10,status:"sent",note:"Báo giá rèm vải",items:[
+    {sku:"DKF6",name:"Điều khiển từ xa 6 kênh FOREST",unit:"Cái",rong:0,cao:0,sobo:2,qty:2,price:1782000},
+    {sku:"LYF",name:"Thanh ray động cơ chiết ly FOREST",unit:"M",rong:3.54,cao:0,sobo:1,qty:3.54,price:621000},
+  ],subtotal:5762340,total:5186106},
+  {id:2,code:"BG-2026-002",date:dAgo(5),custName:"Rèm Phương Linh",custCode:"HU-PHUONGLINH",custAddr:"227 Nguyễn Thị Minh Khai, TP Bắc Giang",custPhone:"0913335222",deliveryAddress:"",dealerId:"",discountPct:0,status:"draft",note:"",items:[
+    {sku:"CTTF2",name:"Công tắc gắn tường 2 kênh FOREST",unit:"Cái",rong:0,cao:0,sobo:1,qty:1,price:918000},
+    {sku:"DKF6",name:"Điều khiển từ xa 6 kênh FOREST",unit:"Cái",rong:0,cao:0,sobo:1,qty:1,price:1782000},
+  ],subtotal:2700000,total:2700000},
+];
+
 const SALES_TEAM = [
   {id:1,name:"Linh",role:"Sales Senior",avatar:"L",targetMonth:5,targetWeek:2,dealsWon:3,dealsActive:4,dealsLost:1,commission:8,baseCommission:0.05},
   {id:2,name:"Sales 2",role:"Sales Senior",avatar:"2",targetMonth:4,targetWeek:2,dealsWon:2,dealsActive:3,dealsLost:0,commission:6,baseCommission:0.05},
@@ -155,6 +184,14 @@ const DELIVERY_STATUS=[
   {id:"cancelled", label:"Đã huỷ",    dot:D.s400,bg:D.s100},
 ];
 const DELIVERY_CARRIERS=["Xe tải PSV","Giao Hàng Nhanh","Viettel Post","Nhà xe","Khách tự lấy"];
+
+const QUOTE_STATUS=[
+  {id:"draft",label:"Nháp",      dot:D.s400,bg:D.s100},
+  {id:"sent", label:"Đã gửi KH", dot:D.bl,  bg:D.blL},
+  {id:"won",  label:"Đã chốt",   dot:D.gr,  bg:D.grL},
+  {id:"lost", label:"Không chốt",dot:D.rd,  bg:D.rdL},
+];
+const quoteStatusOf=id=>QUOTE_STATUS.find(s=>s.id===id)||QUOTE_STATUS[0];
 
 const LOST_MAP={L01:"Không đủ vốn",L02:"Không phải người QĐ",L03:"Chọn đối thủ",L04:"Không nhu cầu",L05:"Sai thị trường",L06:"Không hài lòng CS",L07:"Không liên lạc được",L08:"Giá cao hơn ĐT",L09:"Chưa sẵn sàng",L10:"Lý do khác"};
 const REGIONS=["Hà Nội","TP.HCM","Đà Nẵng","Hải Phòng","Cần Thơ","Bình Dương","Khác"];
@@ -731,45 +768,40 @@ const PipelineView=({S,dispatch,openModal})=>{
 const CatalogView=({S,dispatch,toast})=>{
   const [tab,setTab]=useState("catalog");
   const [quoteItems,setQI]=useState([]);
-  const [quoteCustomer,setQC]=useState("");
+  const [qName,setQName]=useState("");
+  const [qCode,setQCode]=useState("");
+  const [qAddr,setQAddr]=useState("");
+  const [qPhone,setQPhone]=useState("");
+  const [qDeliv,setQDeliv]=useState("");
+  const [qDate,setQDate]=useState(todayStr);
+  const [qDiscount,setQDiscount]=useState(0);
   const [search,setSr]=useState("");
   const [grp,setGrp]=useState("");
   const [openDesc,setOpenDesc]=useState(null);
+  const RETAIL_MULT=2;
+  const qtyOf=it=>it.unit==="M"?Math.round((+it.rong||0)*(+it.sobo||1)*100)/100:(+it.sobo||1);
 
-  const filtered=MATERIALS.filter(p=>
+  const MATS=S.materials&&S.materials.length?S.materials:MATERIALS;
+  const groups=[...new Set(MATS.map(m=>m.group).filter(Boolean))];
+  const filtered=MATS.filter(p=>
     (!grp||p.group===grp)&&
     (!search||p.name.toLowerCase().includes(search.toLowerCase())||p.code.toLowerCase().includes(search.toLowerCase())||(p.desc||"").toLowerCase().includes(search.toLowerCase()))
   );
 
-  const addToQuote=(p)=>{setQI(qi=>{const ex=qi.find(i=>i.id===p.id);if(ex)return qi.map(i=>i.id===p.id?{...i,qty:i.qty+1}:i);return[...qi,{id:p.id,code:p.code,name:p.name,desc:p.desc,unit:p.unit,price:p.price,qty:1,discount:0}];});toast&&toast(`Đã thêm ${p.code} vào báo giá`);};
+  const pickDealer=id=>{const d=S.dealers.find(x=>x.id===+id);if(d){setQName(d.name);setQCode(d.code||"");setQAddr(d.region||"");setQPhone(d.phone||"");}};
+  const addToQuote=(p)=>{setQI(qi=>{const ex=qi.find(i=>i.id===p.id);if(ex)return qi.map(i=>i.id===p.id?{...i,sobo:(+i.sobo||1)+1}:i);return[...qi,{id:p.id,code:p.code,name:p.name,desc:p.desc,unit:p.unit,price:p.price,rong:"",cao:"",sobo:1}];});toast&&toast(`Đã thêm ${p.code} vào báo giá`);};
   const removeFromQuote=id=>setQI(qi=>qi.filter(i=>i.id!==id));
-  const updateQty=(id,qty)=>setQI(qi=>qi.map(i=>i.id===id?{...i,qty:Math.max(1,+qty||1)}:i));
-  const updateDiscount=(id,d)=>setQI(qi=>qi.map(i=>i.id===id?{...i,discount:Math.min(50,Math.max(0,+d||0))}:i));
+  const setQItem=(id,k,v)=>setQI(qi=>qi.map(i=>i.id===id?{...i,[k]:v}:i));
 
-  const quoteSub=quoteItems.reduce((a,i)=>a+i.qty*i.price,0);
-  const quoteDisc=quoteItems.reduce((a,i)=>a+i.qty*i.price*i.discount/100,0);
+  const quoteSub=quoteItems.reduce((a,i)=>a+qtyOf(i)*(+i.price||0),0);
+  const quoteDisc=Math.round(quoteSub*(+qDiscount||0)/100);
   const quoteTotal=quoteSub-quoteDisc;
 
   const printQuote=()=>{
     const win=window.open("","_blank"); if(!win) return;
-    win.document.write(`<html><head><title>Bao gia PSV HOME</title><style>
-      body{font-family:Arial,sans-serif;padding:40px;color:#111}
-      h1{color:#2A0709}
-      table{width:100%;border-collapse:collapse;margin-top:20px}
-      th{background:#2A0709;color:#F5C542;padding:9px;text-align:left;font-size:12px}
-      td{padding:7px 9px;border-bottom:1px solid #eee;font-size:12px;vertical-align:top}
-      .r{text-align:right}.total{font-weight:bold;font-size:14px;color:#2A0709}
-      .desc{color:#666;font-size:10px;white-space:pre-line;margin-top:3px}
-      .footer{margin-top:30px;font-size:11px;color:#888}
-    </style></head><body>
-      <h1>PSV HOME — BÁO GIÁ VẬT TƯ</h1>
-      <p><b>Khách hàng:</b> ${quoteCustomer||"—"} &nbsp;|&nbsp; <b>Ngày:</b> ${todayStr}</p>
-      <table><thead><tr><th>Mã VT</th><th>Tên & diễn giải</th><th>ĐVT</th><th class="r">SL</th><th class="r">Đơn giá</th><th class="r">Giảm</th><th class="r">Thành tiền</th></tr></thead>
-      <tbody>${quoteItems.map(i=>`<tr><td>${i.code}</td><td><b>${i.name}</b>${i.desc?`<div class="desc">${i.desc}</div>`:""}</td><td>${i.unit||""}</td><td class="r">${i.qty}</td><td class="r">${i.price.toLocaleString("vi-VN")}</td><td class="r">${i.discount}%</td><td class="r">${Math.round(i.qty*i.price*(1-i.discount/100)).toLocaleString("vi-VN")}</td></tr>`).join("")}
-      <tr><td colspan="6" class="total r">TỔNG CỘNG (VNĐ)</td><td class="total r">${Math.round(quoteTotal).toLocaleString("vi-VN")}</td></tr>
-      </tbody></table>
-      <div class="footer"><p>PSV HOME — Phân phối Motor Rèm Tự Động Forest · PSV · SUP · Dooya · AOK · SOMFY</p><p>Báo giá có hiệu lực 7 ngày. Giá theo Giá Đại Lý, chưa gồm VAT (nếu có).</p></div>
-    </body></html>`);
+    const m=qDate?qDate.slice(5,7).replace(/^0/,""):"";const y=qDate?qDate.slice(0,4):"";
+    const rows=quoteItems.map((it,i)=>{const q=qtyOf(it);const retail=Math.round((+it.price||0)*RETAIL_MULT);return `<tr><td class="c">${i+1}</td><td><b>${it.name||""}</b>${it.desc?`<div class="desc">${it.desc}</div>`:""}</td><td class="c">${it.unit||""}</td><td class="c">${dim(it.rong,3)}</td><td class="c">${dim(it.cao,3)}</td><td class="c">${it.sobo!=null&&it.sobo!==""?it.sobo:""}</td><td class="r">${q.toFixed(2)}</td><td class="r">${vnd(retail)}</td><td class="r">${vnd(+it.price||0)}</td><td class="r">${vnd(Math.round(q*(+it.price||0)))}</td><td></td></tr>`;}).join("");
+    win.document.write(`<html><head><meta charset="utf-8"><title>Báo giá ${qName||""}</title><style>${PSV_PRINT_CSS}</style></head><body>${PSV_HEADER}<h2 class="title">BÁO GIÁ</h2><table class="info"><tr><td><b>Tên khách hàng:</b> ${qName||""}</td><td><b>Ngày báo giá:</b> ${qDate||""}</td></tr><tr><td><b>Mã khách hàng:</b> ${qCode||""}</td><td><b>Số báo giá:</b> ${m&&y?`${m}/${y}`:""}</td></tr><tr><td><b>Địa chỉ:</b> ${qAddr||""}</td><td><b>Điện thoại:</b> ${qPhone||""}</td></tr><tr><td colspan="2"><b>Địa chỉ giao hàng / lắp đặt:</b> ${qDeliv||""}</td></tr></table><table class="items"><thead><tr><th>STT</th><th>Chi tiết sản phẩm</th><th>ĐVT</th><th>Rộng (m)</th><th>Cao (m)</th><th>Số bộ</th><th>Số lượng</th><th>Giá bán lẻ (VND)</th><th>Giá đại lý (VND)</th><th>Thành tiền (VND)</th><th>Ghi chú</th></tr></thead><tbody>${rows}<tr class="sum"><td colspan="9" class="r">TỔNG CỘNG</td><td class="r">${vnd(Math.round(quoteSub))}</td><td></td></tr>${qDiscount>0?`<tr class="sum"><td colspan="9" class="r">Chiết khấu ${qDiscount}% vật tư</td><td class="r">${vnd(quoteDisc)}</td><td></td></tr>`:""}<tr class="sum tot"><td colspan="9" class="r">CÒN LẠI</td><td class="r">${vnd(Math.round(quoteTotal))}</td><td></td></tr></tbody></table><div class="notes"><b>GHI CHÚ:</b><div>- Đơn giá đã bao gồm thuế VAT 8%, chưa tính chi phí vận chuyển ngoại tỉnh, chưa có chi phí thi công.</div><div>- Đơn giá đã bao gồm phí vận chuyển trong nội thành Hà Nội, Hồ Chí Minh.</div><div>- Đơn giá áp dụng từ ngày 01/04/2026 cho đến khi có thông báo mới.</div><div>- Đề nghị Quý khách kiểm tra hàng hoá khi nhận; sai sót sau khi ký nhận chúng tôi không chịu trách nhiệm.</div></div><table class="sign"><tr><td>XÁC NHẬN CỦA KHÁCH HÀNG</td><td>ĐẠI DIỆN CÔNG TY CP CÔNG NGHỆ PSV HOME</td></tr></table></body></html>`);
     win.document.close();win.print();
   };
 
@@ -777,7 +809,7 @@ const CatalogView=({S,dispatch,toast})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
         <h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Vật tư & Báo Giá</h2>
-        <span style={{fontSize:12,color:D.s400}}>{MATERIALS.length} mã vật tư</span>
+        <span style={{fontSize:12,color:D.s400}}>{MATS.length} mã vật tư</span>
         <div style={{flex:1}}/>
         <div style={{display:"flex",gap:1,borderRadius:9,overflow:"hidden",border:`1px solid ${D.s200}`}}>
           {["catalog","quote"].map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:"7px 18px",border:"none",background:tab===t?D.bg:D.w,color:tab===t?D.gold:D.s600,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{t==="catalog"?"📦 Danh mục vật tư":"📄 Báo giá"+(quoteItems.length?` (${quoteItems.length})`:"")} </button>)}
@@ -790,8 +822,8 @@ const CatalogView=({S,dispatch,toast})=>{
             <input value={search} onChange={e=>setSr(e.target.value)} placeholder="🔍 Tìm mã, tên, diễn giải vật tư..."
               style={{padding:"7px 12px",borderRadius:9,border:`1px solid ${D.s200}`,fontSize:12,flex:1,minWidth:220,fontFamily:"inherit"}}/>
             <select value={grp} onChange={e=>setGrp(e.target.value)} style={{padding:"7px 10px",borderRadius:9,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",maxWidth:340}}>
-              <option value="">Tất cả nhóm ({MATERIALS.length})</option>
-              {MATERIAL_GROUPS.map(g=><option key={g} value={g}>{g}</option>)}
+              <option value="">Tất cả nhóm ({MATS.length})</option>
+              {groups.map(g=><option key={g} value={g}>{g}</option>)}
             </select>
             <div style={{fontSize:12,color:D.s500,display:"flex",alignItems:"center"}}>{filtered.length} kết quả</div>
           </div>
@@ -827,55 +859,70 @@ const CatalogView=({S,dispatch,toast})=>{
       )}
 
       {tab==="quote"&&(
-        <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:20}}>
-          <div style={{display:"grid",gap:16}}>
-            <Card>
-              <div style={{marginBottom:16}}>
-                <Inp label="Tên khách hàng / đại lý" value={quoteCustomer} onChange={setQC} ph="Nguyễn Văn A — Rèm ABC"/>
+        <div style={{display:"grid",gap:16}}>
+          <Card>
+            <div style={{fontWeight:700,fontSize:13,color:D.s900,marginBottom:12}}>👤 Thông tin khách hàng (báo giá)</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+              <Inp label="Chọn đại lý (tự điền)" value="" onChange={pickDealer} opts={[{value:"",label:"— Chọn để tự điền —"},...S.dealers.map(d=>({value:d.id,label:d.name}))]}/>
+              <Inp label="Tên khách hàng" value={qName} onChange={setQName} ph="Rèm ABC / Anh A"/>
+              <Inp label="Mã khách hàng" value={qCode} onChange={setQCode} ph="L-XXX"/>
+              <Inp label="Điện thoại" value={qPhone} onChange={setQPhone}/>
+              <Inp label="Ngày báo giá" value={qDate} onChange={setQDate} type="date"/>
+              <Inp label="Địa chỉ" value={qAddr} onChange={setQAddr}/>
+            </div>
+            <div style={{marginTop:12}}><Inp label="Địa chỉ giao hàng / lắp đặt" value={qDeliv} onChange={setQDeliv} ph="(tuỳ chọn)"/></div>
+          </Card>
+
+          <Card p={0} style={{overflow:"hidden"}}>
+            {quoteItems.length===0?(
+              <div style={{textAlign:"center",padding:40,color:D.s400}}>
+                <div style={{fontSize:32,marginBottom:8}}>📦</div>
+                <div style={{fontWeight:600}}>Chưa có vật tư trong báo giá</div>
+                <Btn v="outline" sz="sm" onClick={()=>setTab("catalog")} style={{marginTop:12}}>← Chọn vật tư từ danh mục</Btn>
               </div>
-              {quoteItems.length===0?(
-                <div style={{textAlign:"center",padding:40,color:D.s400}}>
-                  <div style={{fontSize:32,marginBottom:8}}>📦</div>
-                  <div style={{fontWeight:600}}>Chưa có vật tư trong báo giá</div>
-                  <Btn v="outline" sz="sm" onClick={()=>setTab("catalog")} style={{marginTop:12}}>← Chọn vật tư</Btn>
-                </div>
-              ):(
-                <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead><tr style={{background:D.s50}}>{["Vật tư","Đơn giá","SL","Giảm %","Thành tiền",""].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:D.s500,borderBottom:`1px solid ${D.s200}`}}>{h}</th>)}</tr></thead>
-                  <tbody>
-                    {quoteItems.map(i=>(
-                      <tr key={i.id} style={{borderBottom:`1px solid ${D.s100}`}}>
-                        <td style={{padding:"10px 10px"}}><div style={{fontWeight:600,fontSize:13,color:D.s900}}>{i.name}</div><div style={{fontSize:11,color:D.s400}}>{i.code} · {i.unit}</div></td>
-                        <td style={{padding:"10px 10px",fontSize:13,fontWeight:700,color:D.bg,whiteSpace:"nowrap"}}>{i.price.toLocaleString("vi-VN")}</td>
-                        <td style={{padding:"10px 10px"}}><input type="number" value={i.qty} min={1} onChange={e=>updateQty(i.id,e.target.value)} style={{width:56,padding:"5px 8px",borderRadius:7,border:`1px solid ${D.s200}`,fontSize:13,textAlign:"center",fontFamily:"inherit"}}/></td>
-                        <td style={{padding:"10px 10px"}}><input type="number" value={i.discount} min={0} max={50} onChange={e=>updateDiscount(i.id,e.target.value)} style={{width:52,padding:"5px 8px",borderRadius:7,border:`1px solid ${D.s200}`,fontSize:13,textAlign:"center",fontFamily:"inherit"}}/></td>
-                        <td style={{padding:"10px 10px",fontWeight:800,fontSize:13,color:D.s900,whiteSpace:"nowrap"}}>{Math.round(i.qty*i.price*(1-i.discount/100)).toLocaleString("vi-VN")}</td>
-                        <td style={{padding:"10px 10px"}}><button onClick={()=>removeFromQuote(i.id)} style={{background:"none",border:"none",color:D.s300,cursor:"pointer",fontSize:18}}>×</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </Card>
+            ):(
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr style={{background:D.bg}}>{["Vật tư","ĐVT","Rộng","Cao","Số bộ","SL","Giá lẻ","Giá ĐL","Thành tiền",""].map(h=><th key={h} style={{padding:"8px 8px",textAlign:"left",fontSize:10,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {quoteItems.map(i=>{const q=qtyOf(i);const inp={width:"100%",padding:"5px 6px",borderRadius:6,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"};return(
+                    <tr key={i.id} style={{borderBottom:`1px solid ${D.s100}`}}>
+                      <td style={{padding:"8px 8px",minWidth:190}}><div style={{fontWeight:600,fontSize:12,color:D.s900}}>{i.name}</div><div style={{fontSize:10,color:D.s400}}>{i.code}</div></td>
+                      <td style={{padding:"8px 6px",fontSize:11,color:D.s600}}>{i.unit}</td>
+                      <td style={{padding:"8px 4px",width:64}}><input type="number" step="0.01" value={i.rong} onChange={e=>setQItem(i.id,"rong",e.target.value)} placeholder="—" style={inp}/></td>
+                      <td style={{padding:"8px 4px",width:64}}><input type="number" step="0.01" value={i.cao} onChange={e=>setQItem(i.id,"cao",e.target.value)} placeholder="—" style={inp}/></td>
+                      <td style={{padding:"8px 4px",width:56}}><input type="number" min="0" value={i.sobo} onChange={e=>setQItem(i.id,"sobo",e.target.value)} style={inp}/></td>
+                      <td style={{padding:"8px 6px",fontSize:12,fontWeight:800,color:D.bg}}>{q}</td>
+                      <td style={{padding:"8px 6px",fontSize:11,color:D.s400,textDecoration:"line-through",whiteSpace:"nowrap"}}>{vnd(Math.round(i.price*RETAIL_MULT))}</td>
+                      <td style={{padding:"8px 6px",fontSize:12,fontWeight:700,color:D.s700,whiteSpace:"nowrap"}}>{vnd(i.price)}</td>
+                      <td style={{padding:"8px 6px",fontSize:12,fontWeight:800,color:D.s900,whiteSpace:"nowrap"}}>{vnd(Math.round(q*i.price))}</td>
+                      <td style={{padding:"8px 6px"}}><button onClick={()=>removeFromQuote(i.id)} style={{background:"none",border:"none",color:D.s300,cursor:"pointer",fontSize:18}}>×</button></td>
+                    </tr>
+                  );})}
+                </tbody>
+              </table>
+            )}
+          </Card>
+
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:16}}>
             <Btn v="ghost" sz="sm" onClick={()=>setTab("catalog")} icon="←">Thêm vật tư</Btn>
-          </div>
-          <div style={{display:"grid",gap:14,alignContent:"start"}}>
-            <Card style={{border:`2px solid ${D.gold}`}}>
-              <div style={{fontWeight:800,fontSize:15,color:D.bg,marginBottom:16}}>Tổng báo giá (VNĐ)</div>
-              <div style={{display:"grid",gap:10}}>
-                {[
-                  {label:"Tạm tính",val:vnd(Math.round(quoteSub)),c:D.s600},
-                  {label:"Giảm giá",val:"- "+vnd(Math.round(quoteDisc)),c:D.gr},
-                  {label:"Tổng thanh toán",val:vnd(Math.round(quoteTotal)),c:D.bg,big:true},
-                ].map(r=>(
-                  <div key={r.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:8,borderBottom:r.big?`2px solid ${D.gold}`:"none"}}>
-                    <span style={{fontSize:12,color:D.s600}}>{r.label}</span>
-                    <span style={{fontWeight:r.big?800:600,fontSize:r.big?18:13,color:r.c}}>{r.val}</span>
-                  </div>
-                ))}
+            <Card style={{border:`2px solid ${D.gold}`,minWidth:320}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <span style={{fontWeight:800,fontSize:14,color:D.bg}}>Tổng báo giá (VNĐ)</span>
+                <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:11,color:D.s500}}>Chiết khấu</span><input type="number" value={qDiscount} min={0} max={100} onChange={e=>setQDiscount(Math.min(100,Math.max(0,+e.target.value||0)))} style={{width:50,padding:"4px 6px",borderRadius:6,border:`1px solid ${D.s200}`,fontSize:12,textAlign:"center",fontFamily:"inherit"}}/><span style={{fontSize:11,color:D.s500}}>%</span></div>
               </div>
-              <div style={{marginTop:16,display:"grid",gap:8}}>
-                <Btn v="gold" full onClick={printQuote} icon="🖨️" disabled={!quoteItems.length}>In báo giá PDF</Btn>
+              <div style={{display:"grid",gap:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:D.s600}}><span>Tổng cộng</span><b style={{color:D.s900}}>{vnd(Math.round(quoteSub))}đ</b></div>
+                {qDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:D.gr}}><span>Chiết khấu {qDiscount}%</span><b>- {vnd(quoteDisc)}đ</b></div>}
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:17,fontWeight:900,color:D.bg,borderTop:`2px solid ${D.gold}`,paddingTop:8}}><span>CÒN LẠI</span><span>{vnd(Math.round(quoteTotal))}đ</span></div>
+              </div>
+              <div style={{marginTop:14,display:"grid",gap:8}}>
+                <Btn v="gold" full onClick={printQuote} icon="🖨️" disabled={!quoteItems.length}>In BÁO GIÁ (mẫu PSV)</Btn>
+                <Btn v="outline" full disabled={!quoteItems.length} onClick={()=>{
+                  const nums=(S.quotes||[]).map(x=>parseInt(String(x.code||"").split("-")[2])||0);
+                  const code=`BG-${new Date().getFullYear()}-${String(Math.max(0,...nums)+1).padStart(3,"0")}`;
+                  dispatch({type:"SAVE_QUOTE",data:{code,date:qDate,custName:qName,custCode:qCode,custAddr:qAddr,custPhone:qPhone,deliveryAddress:qDeliv,dealerId:"",discountPct:+qDiscount||0,status:"draft",note:"",subtotal:Math.round(quoteSub),total:Math.round(quoteTotal),items:quoteItems.map(it=>({sku:it.code,name:it.name,unit:it.unit||"Cái",rong:+it.rong||0,cao:+it.cao||0,sobo:it.sobo===""?1:+it.sobo,qty:qtyOf(it),price:it.price}))}});
+                  toast&&toast(`✅ Đã lưu vào mục Báo giá (${code})`);
+                }}>💾 Lưu vào mục Báo giá</Btn>
                 <Btn v="ghost" full onClick={()=>{setQI([]);toast&&toast("Đã xoá báo giá");}} icon="🗑️">Xoá & làm mới</Btn>
               </div>
             </Card>
@@ -884,6 +931,56 @@ const CatalogView=({S,dispatch,toast})=>{
       )}
     </div>
   );
+};
+
+// ── IN ĐƠN ĐẶT HÀNG / ĐƠN SẢN XUẤT (mẫu PSV HOME) ────────────────────────────
+const PSV_HEADER=`<div style="text-align:center">
+  <div style="font-weight:bold;font-size:15px;color:#2A0709">CÔNG TY CỔ PHẦN CÔNG NGHỆ PSV HOME</div>
+  <div style="font-size:10px;color:#444">Hà Nội: Số 11 Ngõ 250/80A Phan Trọng Tuệ, P. Hoàng Liệt, TP Hà Nội &nbsp;·&nbsp; Hotline: 0983 128 865 - 0984 968 987</div>
+  <div style="font-size:10px;color:#444">Hồ Chí Minh: Số 110 Nguyễn Thị Xinh, P. Thới An, TP Hồ Chí Minh &nbsp;·&nbsp; Hotline: 0838 956 689 - 0983 580 506</div>
+  <div style="font-size:10px;color:#888">www.psvhome.vn</div></div>`;
+const PSV_PRINT_CSS=`
+  body{font-family:Arial,sans-serif;padding:24px;color:#111}
+  .title{text-align:center;color:#2A0709;margin:14px 0;letter-spacing:2px}
+  table{width:100%;border-collapse:collapse}
+  .info td{padding:3px 6px;font-size:12px;vertical-align:top}
+  .items{margin-top:8px}
+  .items th{background:#2A0709;color:#F5C542;padding:6px;font-size:11px;border:1px solid #777}
+  .items td{padding:5px 6px;font-size:11px;border:1px solid #ccc;vertical-align:top}
+  .items .c{text-align:center}.items .r{text-align:right}
+  .desc{color:#666;font-size:9px;white-space:pre-line;margin-top:2px}
+  .sum td{font-weight:bold;background:#FAF6E8}.tot td{font-size:13px;color:#2A0709}
+  .notes{margin-top:14px;font-size:11px;color:#333}.notes div{margin-top:3px}
+  .sign{margin-top:34px;text-align:center}.sign td{font-weight:bold;font-size:12px;width:50%;padding-bottom:55px;vertical-align:top}`;
+const custBlock=(order,dealer)=>`<table class="info">
+  <tr><td><b>Tên khách hàng:</b> ${dealer?.name||""}</td><td><b>Ngày đặt:</b> ${order.date||""}</td></tr>
+  <tr><td><b>Mã khách hàng:</b> ${dealer?.code||""}</td><td><b>Số đơn hàng:</b> ${order.code||""}</td></tr>
+  <tr><td><b>Địa chỉ:</b> ${dealer?.region||""}</td><td><b>Điện thoại:</b> ${dealer?.phone||""}</td></tr>
+  <tr><td colspan="2"><b>Địa chỉ giao hàng / lắp đặt:</b> ${order.deliveryAddress||dealer?.region||""}</td></tr></table>`;
+const dim=(v,n)=>(v!=null&&v!==""&&+v>0)?(+v).toFixed(n):"";
+const printOrderPO=(order,dealer)=>{
+  const win=window.open("","_blank");if(!win)return;
+  const sub=order.subtotal!=null?order.subtotal:order.items.reduce((a,it)=>a+(+it.qty||0)*(+it.price||0),0);
+  const pct=+order.discountPct||0;const disc=Math.round(sub*pct/100);const total=order.total!=null?order.total:sub-disc;
+  const rows=order.items.map((it,i)=>{const desc=matByCode(it.sku)?.desc;return `<tr><td class="c">${i+1}</td><td><b>${it.name||it.sku||""}</b>${desc?`<div class="desc">${desc}</div>`:""}</td><td class="c">${it.unit||""}</td><td class="c">${dim(it.rong,3)}</td><td class="c">${dim(it.cao,3)}</td><td class="c">${it.sobo!=null&&it.sobo!==""?it.sobo:""}</td><td class="r">${(+(it.qty||0)).toFixed(2)}</td><td class="r">${vnd(+it.price||0)}</td><td class="r">${vnd(Math.round((+it.qty||0)*(+it.price||0)))}</td><td></td></tr>`;}).join("");
+  win.document.write(`<html><head><meta charset="utf-8"><title>Đơn đặt hàng ${order.code||""}</title><style>${PSV_PRINT_CSS}</style></head><body>${PSV_HEADER}<h2 class="title">ĐƠN ĐẶT HÀNG</h2>${custBlock(order,dealer)}<table class="items"><thead><tr><th>STT</th><th>Chi tiết sản phẩm</th><th>ĐVT</th><th>Rộng (m)</th><th>Cao (m)</th><th>Số bộ</th><th>Số lượng</th><th>Đơn giá (VND)</th><th>Thành tiền (VND)</th><th>Ghi chú</th></tr></thead><tbody>${rows}<tr class="sum"><td colspan="8" class="r">TỔNG CỘNG</td><td class="r">${vnd(Math.round(sub))}</td><td></td></tr>${pct>0?`<tr class="sum"><td colspan="8" class="r">Chiết khấu ${pct}% vật tư</td><td class="r">${vnd(disc)}</td><td></td></tr>`:""}<tr class="sum tot"><td colspan="8" class="r">CÒN LẠI</td><td class="r">${vnd(Math.round(total))}</td><td></td></tr></tbody></table><div class="notes"><b>GHI CHÚ:</b><div>- Đơn giá đã bao gồm thuế VAT 8%, chưa tính chi phí vận chuyển ngoại tỉnh, chưa có chi phí thi công.</div><div>- Đơn giá đã bao gồm phí vận chuyển trong nội thành Hà Nội.</div><div>- Đơn giá áp dụng từ ngày 01/04/2026 cho đến khi có thông báo mới.</div><div>- Đề nghị Quý khách kiểm tra hàng hoá khi nhận; sai sót sau khi ký nhận chúng tôi không chịu trách nhiệm.</div></div><table class="sign"><tr><td>XÁC NHẬN CỦA KHÁCH HÀNG</td><td>ĐẠI DIỆN CÔNG TY CP CÔNG NGHỆ PSV HOME</td></tr></table></body></html>`);
+  win.document.close();win.print();
+};
+const printOrderProduction=(order,dealer)=>{
+  const win=window.open("","_blank");if(!win)return;
+  const rows=order.items.map((it,i)=>{const desc=matByCode(it.sku)?.desc;return `<tr><td class="c">${i+1}</td><td><b>${it.name||it.sku||""}</b>${desc?`<div class="desc">${desc}</div>`:""}</td><td class="c">${it.unit||""}</td><td class="c">${dim(it.rong,3)}</td><td class="c">${dim(it.cao,3)}</td><td class="c">${it.sobo!=null&&it.sobo!==""?it.sobo:""}</td><td class="r">${(+(it.qty||0)).toFixed(2)}</td><td></td></tr>`;}).join("");
+  win.document.write(`<html><head><meta charset="utf-8"><title>Đơn sản xuất ${order.code||""}</title><style>${PSV_PRINT_CSS}</style></head><body>${PSV_HEADER}<h2 class="title">ĐƠN SẢN XUẤT</h2>${custBlock(order,dealer)}<table class="items"><thead><tr><th>STT</th><th>Chi tiết sản phẩm</th><th>ĐVT</th><th>Rộng (m)</th><th>Cao (m)</th><th>Số bộ</th><th>Số lượng</th><th>Ghi chú</th></tr></thead><tbody>${rows}</tbody></table><div class="notes"><b>GHI CHÚ:</b> KÍCH THƯỚC HOÀN THIỆN, BỌC BÌA GIẤY PSV CẨN THẬN, SẢN XUẤT GIAO HÀNG CHO KHÁCH.</div><table class="sign"><tr><td>BỘ PHẬN SẢN XUẤT KÝ XÁC NHẬN ĐƠN SẢN XUẤT HOÀN THÀNH</td></tr></table></body></html>`);
+  win.document.close();win.print();
+};
+
+const printQuotePSV=(q)=>{
+  const win=window.open("","_blank");if(!win)return;const RETAIL=2;
+  const sub=q.subtotal!=null?q.subtotal:q.items.reduce((a,it)=>a+(+it.qty||0)*(+it.price||0),0);
+  const pct=+q.discountPct||0;const disc=Math.round(sub*pct/100);const total=q.total!=null?q.total:sub-disc;
+  const m=q.date?q.date.slice(5,7).replace(/^0/,""):"";const y=q.date?q.date.slice(0,4):"";
+  const rows=q.items.map((it,i)=>{const desc=matByCode(it.sku)?.desc;const retail=Math.round((+it.price||0)*RETAIL);return `<tr><td class="c">${i+1}</td><td><b>${it.name||it.sku||""}</b>${desc?`<div class="desc">${desc}</div>`:""}</td><td class="c">${it.unit||""}</td><td class="c">${dim(it.rong,3)}</td><td class="c">${dim(it.cao,3)}</td><td class="c">${it.sobo!=null&&it.sobo!==""?it.sobo:""}</td><td class="r">${(+(it.qty||0)).toFixed(2)}</td><td class="r">${vnd(retail)}</td><td class="r">${vnd(+it.price||0)}</td><td class="r">${vnd(Math.round((+it.qty||0)*(+it.price||0)))}</td><td></td></tr>`;}).join("");
+  win.document.write(`<html><head><meta charset="utf-8"><title>Báo giá ${q.code||q.custName||""}</title><style>${PSV_PRINT_CSS}</style></head><body>${PSV_HEADER}<h2 class="title">BÁO GIÁ</h2><table class="info"><tr><td><b>Tên khách hàng:</b> ${q.custName||""}</td><td><b>Ngày báo giá:</b> ${q.date||""}</td></tr><tr><td><b>Mã khách hàng:</b> ${q.custCode||""}</td><td><b>Số báo giá:</b> ${q.code||(m&&y?`${m}/${y}`:"")}</td></tr><tr><td><b>Địa chỉ:</b> ${q.custAddr||""}</td><td><b>Điện thoại:</b> ${q.custPhone||""}</td></tr><tr><td colspan="2"><b>Địa chỉ giao hàng / lắp đặt:</b> ${q.deliveryAddress||""}</td></tr></table><table class="items"><thead><tr><th>STT</th><th>Chi tiết sản phẩm</th><th>ĐVT</th><th>Rộng (m)</th><th>Cao (m)</th><th>Số bộ</th><th>Số lượng</th><th>Giá bán lẻ (VND)</th><th>Giá đại lý (VND)</th><th>Thành tiền (VND)</th><th>Ghi chú</th></tr></thead><tbody>${rows}<tr class="sum"><td colspan="9" class="r">TỔNG CỘNG</td><td class="r">${vnd(Math.round(sub))}</td><td></td></tr>${pct>0?`<tr class="sum"><td colspan="9" class="r">Chiết khấu ${pct}% vật tư</td><td class="r">${vnd(disc)}</td><td></td></tr>`:""}<tr class="sum tot"><td colspan="9" class="r">CÒN LẠI</td><td class="r">${vnd(Math.round(total))}</td><td></td></tr></tbody></table><div class="notes"><b>GHI CHÚ:</b><div>- Đơn giá đã bao gồm thuế VAT 8%, chưa tính chi phí vận chuyển ngoại tỉnh, chưa có chi phí thi công.</div><div>- Đơn giá đã bao gồm phí vận chuyển trong nội thành Hà Nội, Hồ Chí Minh.</div><div>- Đơn giá áp dụng từ ngày 01/04/2026 cho đến khi có thông báo mới.</div><div>- Đề nghị Quý khách kiểm tra hàng hoá khi nhận; sai sót sau khi ký nhận chúng tôi không chịu trách nhiệm.</div></div><table class="sign"><tr><td>XÁC NHẬN CỦA KHÁCH HÀNG</td><td>ĐẠI DIỆN CÔNG TY CP CÔNG NGHỆ PSV HOME</td></tr></table></body></html>`);
+  win.document.close();win.print();
 };
 
 // ── ORDERS & DEBT ─────────────────────────────────────────────────────────────
@@ -954,7 +1051,13 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
                       {o.completed&&<span style={{fontSize:10,color:D.gr,fontWeight:700,whiteSpace:"nowrap"}}>✓ Đã lắp · hoàn tất</span>}
                     </div>);})()}
                   </td>
-                  <td style={{padding:"11px 14px"}}>{debt>0&&<Btn v="danger" sz="xs" onClick={()=>toast(`Nhắc nợ gửi đến ${dealer?.name}`,)}>Nhắc nợ</Btn>}</td>
+                  <td style={{padding:"11px 14px"}}>
+                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                      <button onClick={()=>printOrderPO(o,dealer)} title="In đơn đặt hàng" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🖨️</button>
+                      <button onClick={()=>printOrderProduction(o,dealer)} title="In đơn sản xuất" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🏭</button>
+                      {debt>0&&<Btn v="danger" sz="xs" onClick={()=>toast(`Nhắc nợ gửi đến ${dealer?.name}`,)}>Nhắc nợ</Btn>}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
@@ -1562,7 +1665,7 @@ const DealForm=({deal,onSave,onClose,onDel})=>{
 // APP ROOT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const INIT_STATE={deals:DEALS,dealers:DEALERS,orders:ORDERS,tickets:TICKETS,installs:INSTALLS,deliveries:DELIVERIES,followups:FOLLOWUPS,mondayNotes:"",kpiTarget:{target:500,months:12,avgDeal:25,convRate:10}};
+const INIT_STATE={deals:DEALS,dealers:DEALERS,customers:CUSTOMERS,materials:MATERIALS,orders:ORDERS,tickets:TICKETS,installs:INSTALLS,deliveries:DELIVERIES,quotes:QUOTES,followups:FOLLOWUPS,mondayNotes:"",kpiTarget:{target:500,months:12,avgDeal:25,convRate:10}};
 
 // Khi lịch lắp chuyển "done": đánh dấu đơn hoàn tất + tạo follow-up CSKH (1 lần)
 function installDone(state,it,installs){
@@ -1607,6 +1710,13 @@ function reducer(state,action){
       return{...state,deliveries,orders};
     }
     case"DEL_DELIVERY": return{...state,deliveries:(state.deliveries||[]).filter(x=>x.id!==action.id)};
+    case"SAVE_QUOTE": return{...state,quotes:action.data.id?(state.quotes||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.quotes||[]),{...action.data,id:newId(state.quotes||[])}]};
+    case"UPDATE_QUOTE": return{...state,quotes:(state.quotes||[]).map(x=>x.id===action.id?{...x,...action.data}:x)};
+    case"DEL_QUOTE": return{...state,quotes:(state.quotes||[]).filter(x=>x.id!==action.id)};
+    case"SAVE_CUSTOMER": return{...state,customers:action.data.id?(state.customers||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.customers||[]),{...action.data,id:newId(state.customers||[])}]};
+    case"DEL_CUSTOMER": return{...state,customers:(state.customers||[]).filter(x=>x.id!==action.id)};
+    case"SAVE_MATERIAL": return{...state,materials:action.data.id?(state.materials||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.materials||[]),{...action.data,id:newId(state.materials||[])}]};
+    case"DEL_MATERIAL": return{...state,materials:(state.materials||[]).filter(x=>x.id!==action.id)};
     case"TOGGLE_FU": return{...state,followups:state.followups.map(f=>f.id===action.id?{...f,done:!f.done}:f)};
     case"ADD_FU":    return{...state,followups:[...state.followups,{...action.data,id:newId(state.followups),done:false}]};
     case"DEL_FU":    return{...state,followups:state.followups.filter(f=>f.id!==action.id)};
@@ -1618,7 +1728,10 @@ const NAV=[
   {id:"dashboard",icon:"📊",label:"Dashboard"},
   {id:"pipeline", icon:"🔄",label:"Pipeline A"},
   {id:"dealers",  icon:"🤝",label:"Đại lý (B)"},
+  {id:"customers",icon:"👥",label:"DS Khách hàng"},
+  {id:"materials",icon:"🧱",label:"DS Vật tư"},
   {id:"catalog",  icon:"📦",label:"Vật tư & Báo giá"},
+  {id:"quotes",   icon:"🧾",label:"Báo giá"},
   {id:"orders",   icon:"💰",label:"Đơn hàng & Nợ"},
   {id:"tickets",  icon:"🎫",label:"Bảo hành & KT"},
   {id:"installs", icon:"🔧",label:"Lịch lắp đặt"},
@@ -1944,14 +2057,19 @@ const DeliveryForm=({delivery,dealers,orders,onSave,onClose,onDel})=>{
 // ── TẠO ĐƠN HÀNG (PO) + tự tạo lịch giao ─────────────────────────────────────
 const tierPrice=(p,tier)=>tier==="Platinum"?(p.pricePlatinum||p.priceRetail):tier==="Gold"?(p.priceGold||p.priceRetail):p.priceRetail;
 
-const OrderForm=({dealers,onSave,onClose})=>{
-  const [dealerId,setDealerId]=useState(dealers[0]?.id||"");
+const OrderForm=({dealers,onSave,onClose,initial})=>{
+  const ini=initial||{};
+  const [dealerId,setDealerId]=useState(ini.dealerId||dealers[0]?.id||"");
   const dealer=dealers.find(d=>d.id===+dealerId);
-  const [date,setDate]=useState(todayStr);
+  const [date,setDate]=useState(ini.date||todayStr);
   const [status,setStatus]=useState("processing");
   const [paid,setPaid]=useState(0);
-  const [note,setNote]=useState("");
-  const [items,setItems]=useState(()=>[{mid:MATERIALS[0].id,sku:MATERIALS[0].code,name:MATERIALS[0].name,qty:1,price:MATERIALS[0].price}]);
+  const [note,setNote]=useState(ini.note||"");
+  const [discountPct,setDiscountPct]=useState(ini.discountPct||0);
+  const [deliveryAddress,setDeliveryAddress]=useState(ini.deliveryAddress||"");
+  const mkItem=m=>({mid:m.id,sku:m.code,name:m.name,unit:m.unit||"Cái",rong:"",cao:"",sobo:1,price:m.price});
+  const qtyOf=it=>it.unit==="M"?Math.round((+it.rong||0)*(+it.sobo||1)*100)/100:(+it.sobo||1);
+  const [items,setItems]=useState(()=>(ini.items&&ini.items.length)?ini.items.map(it=>{const m=matByCode(it.sku);return{mid:m?.id||0,sku:it.sku,name:it.name,unit:it.unit||"Cái",rong:it.rong||"",cao:it.cao||"",sobo:it.sobo==null?1:it.sobo,price:it.price};}):[mkItem(LIVE_MATERIALS[0])]);
   const [fulfillment,setFulfillment]=useState("delivery");
   const [delDate,setDelDate]=useState(dFwd(2));
   const [carrier,setCarrier]=useState(DELIVERY_CARRIERS[0]);
@@ -1966,15 +2084,17 @@ const OrderForm=({dealers,onSave,onClose})=>{
   const wantInstall=fulfillment==="delivery_install"||fulfillment==="delivery_install_retail";
   const isRetail=fulfillment==="delivery_install_retail";
 
-  const total=items.reduce((a,i)=>a+(+i.qty||0)*(+i.price||0),0);
-  const totalQty=items.reduce((a,i)=>a+(+i.qty||0),0);
+  const subtotal=items.reduce((a,it)=>a+qtyOf(it)*(+it.price||0),0);
+  const discountAmt=Math.round(subtotal*(+discountPct||0)/100);
+  const grandTotal=subtotal-discountAmt;
+  const total=grandTotal;
 
   const setItem=(idx,k,v)=>setItems(arr=>arr.map((it,i)=>{
     if(i!==idx)return it;
-    if(k==="mid"){const p=MATERIALS.find(m=>m.id===v);return{...it,mid:v,sku:p?.code||"",name:p?.name||"",price:p?.price||0};}
+    if(k==="mid"){const p=LIVE_MATERIALS.find(m=>m.id===v);return{...it,mid:v,sku:p?.code||"",name:p?.name||"",unit:p?.unit||"Cái",price:p?.price||0};}
     return {...it,[k]:v};
   }));
-  const addItem=()=>setItems(a=>[...a,{mid:MATERIALS[0].id,sku:MATERIALS[0].code,name:MATERIALS[0].name,qty:1,price:MATERIALS[0].price}]);
+  const addItem=()=>setItems(a=>[...a,mkItem(LIVE_MATERIALS[0])]);
   const delItem=idx=>setItems(a=>a.length>1?a.filter((_,i)=>i!==idx):a);
   const inSt={padding:"8px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",width:"100%",boxSizing:"border-box"};
 
@@ -1991,28 +2111,42 @@ const OrderForm=({dealers,onSave,onClose})=>{
           <div style={{fontWeight:700,fontSize:13,color:D.s900}}>📦 Vật tư — giá đại lý <b style={{color:D.bg}}>(VNĐ)</b></div>
           <Btn v="ghost" sz="sm" onClick={addItem}>➕ Thêm dòng</Btn>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"2fr 56px 120px 130px 28px",gap:8,fontSize:10,fontWeight:700,color:D.s400,marginBottom:4,padding:"0 2px"}}>
-          <span>Mã — Tên vật tư</span><span>SL</span><span>Đơn giá (VNĐ)</span><span style={{textAlign:"right"}}>Thành tiền</span><span/>
-        </div>
+        <div style={{fontSize:10,color:D.s400,marginBottom:8}}>Rèm vải: nhập <b>Rộng × Số bộ</b> → SL tự tính (theo mét). Vật tư lẻ (Cái/Bộ): chỉ cần <b>Số bộ</b>.</div>
         <div style={{display:"grid",gap:8}}>
-          {items.map((it,idx)=>(
-            <div key={idx} style={{display:"grid",gridTemplateColumns:"2fr 56px 120px 130px 28px",gap:8,alignItems:"center"}}>
-              <select value={it.mid} onChange={e=>setItem(idx,"mid",+e.target.value)} style={inSt}>
-                {MATERIALS.map(c=><option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
-              </select>
-              <input type="number" min="1" value={it.qty} onChange={e=>setItem(idx,"qty",+e.target.value)} style={inSt}/>
-              <input type="number" value={it.price} onChange={e=>setItem(idx,"price",+e.target.value)} style={inSt}/>
-              <div style={{fontSize:12,fontWeight:700,color:D.s700,textAlign:"right"}}>{vnd((+it.qty||0)*(+it.price||0))}</div>
-              <button onClick={()=>delItem(idx)} title="Xoá dòng" style={{background:"none",border:"none",color:D.s300,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+          {items.map((it,idx)=>{const q=qtyOf(it);const mini={fontSize:9,fontWeight:700,color:D.s400,marginBottom:2};return(
+            <div key={idx} style={{border:`1px solid ${D.s200}`,borderRadius:10,padding:10,display:"grid",gap:8}}>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <select value={it.mid} onChange={e=>setItem(idx,"mid",+e.target.value)} style={{...inSt,flex:1}}>
+                  {LIVE_MATERIALS.map(c=><option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+                </select>
+                <button onClick={()=>delItem(idx)} title="Xoá dòng" style={{background:"none",border:"none",color:D.s300,cursor:"pointer",fontSize:20,lineHeight:1}}>×</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"50px 1fr 1fr 70px 84px 120px 120px",gap:6,alignItems:"end"}}>
+                <div><div style={mini}>ĐVT</div><div style={{fontSize:12,fontWeight:700,color:D.s700,padding:"7px 2px",textAlign:"center",background:D.s50,borderRadius:7}}>{it.unit}</div></div>
+                <div><div style={mini}>Rộng (m)</div><input type="number" step="0.01" value={it.rong} onChange={e=>setItem(idx,"rong",e.target.value)} placeholder="—" style={inSt}/></div>
+                <div><div style={mini}>Cao (m)</div><input type="number" step="0.01" value={it.cao} onChange={e=>setItem(idx,"cao",e.target.value)} placeholder="—" style={inSt}/></div>
+                <div><div style={mini}>Số bộ</div><input type="number" min="0" value={it.sobo} onChange={e=>setItem(idx,"sobo",e.target.value)} style={inSt}/></div>
+                <div><div style={mini}>SL{it.unit==="M"?" (R×bộ)":""}</div><div style={{fontSize:13,fontWeight:800,color:D.bg,padding:"7px 2px",textAlign:"center"}}>{q}</div></div>
+                <div><div style={mini}>Đơn giá</div><input type="number" value={it.price} onChange={e=>setItem(idx,"price",+e.target.value)} style={inSt}/></div>
+                <div><div style={mini}>Thành tiền</div><div style={{fontSize:13,fontWeight:800,color:D.s900,padding:"7px 2px",textAlign:"right"}}>{vnd(Math.round(q*(+it.price||0)))}</div></div>
+              </div>
             </div>
-          ))}
+          );})}
         </div>
-        <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:10,paddingTop:10,borderTop:`1px solid ${D.s100}`,fontSize:14,fontWeight:900,color:D.s900}}>Tổng: {vnd(total)}đ · {totalQty} sp</div>
+        <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:10,paddingTop:10,borderTop:`1px solid ${D.s100}`,fontSize:14,fontWeight:900,color:D.s900}}>Tổng cộng: {vnd(Math.round(subtotal))}đ · {items.length} dòng</div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:12}}>
-        <Inp label="Đã thanh toán (VNĐ)" value={paid} onChange={v=>setPaid(+v||0)} type="number" note={total-(+paid||0)>0?`Còn nợ ${vnd(total-(+paid||0))}đ`:"Đã thanh toán đủ"}/>
-        <Inp label="Ghi chú" value={note} onChange={setNote} ph="Ghi chú đơn hàng..."/>
+      <Inp label="Địa chỉ giao hàng / lắp đặt" value={deliveryAddress} onChange={setDeliveryAddress} ph="Để trống = giao theo địa chỉ đại lý"/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+        <Inp label="Chiết khấu (%)" value={discountPct} onChange={v=>setDiscountPct(Math.min(100,Math.max(0,+v||0)))} type="number"/>
+        <Inp label="Đã thanh toán (VNĐ)" value={paid} onChange={v=>setPaid(+v||0)} type="number"/>
+        <Inp label="Ghi chú" value={note} onChange={setNote} ph="Ghi chú đơn..."/>
+      </div>
+      <div style={{display:"grid",gap:5,justifyItems:"end",background:D.s50,borderRadius:10,padding:"12px 16px"}}>
+        <div style={{display:"flex",gap:14,fontSize:13,color:D.s600}}><span>Tổng cộng:</span><b style={{color:D.s900,minWidth:120,textAlign:"right"}}>{vnd(Math.round(subtotal))}đ</b></div>
+        {discountPct>0&&<div style={{display:"flex",gap:14,fontSize:13,color:D.gr}}><span>Chiết khấu {discountPct}% vật tư:</span><b style={{minWidth:120,textAlign:"right"}}>- {vnd(discountAmt)}đ</b></div>}
+        <div style={{display:"flex",gap:14,fontSize:16,fontWeight:900,color:D.bg}}><span>CÒN LẠI:</span><span style={{minWidth:120,textAlign:"right"}}>{vnd(Math.round(grandTotal))}đ</span></div>
+        {grandTotal-(+paid||0)>0&&<div style={{fontSize:11,color:D.rd}}>Còn nợ {vnd(grandTotal-(+paid||0))}đ</div>}
       </div>
 
       <div style={{display:"grid",gap:12}}>
@@ -2067,11 +2201,319 @@ const OrderForm=({dealers,onSave,onClose})=>{
           if(total<=0){alert("Cần nhập sản phẩm và số lượng");return;}
           if(isRetail&&(!retailCustomer||!retailAddress)){alert("Cần nhập tên khách lẻ và địa chỉ công trình");return;}
           onSave(
-            {dealerId:+dealerId,date,items:items.map(i=>({sku:i.sku,name:i.name||matByCode(i.sku)?.name||"",qty:+i.qty||0,price:+i.price||0})),status,paid:+paid||0,total,note},
+            {dealerId:+dealerId,date,items:items.map(i=>({sku:i.sku,name:i.name||matByCode(i.sku)?.name||"",unit:i.unit||"Cái",rong:+i.rong||0,cao:+i.cao||0,sobo:i.sobo===""?1:+i.sobo,qty:qtyOf(i),price:+i.price||0})),status,paid:+paid||0,subtotal:Math.round(subtotal),discountPct:+discountPct||0,deliveryAddress,total:Math.round(grandTotal),note},
             {delivery:{date:delDate,carrier,slot:delSlot},install:wantInstall?{date:insDate,slot:insSlot,tech:insTech,retail:isRetail,customer:retailCustomer,phone:retailPhone,address:retailAddress,region:retailRegion}:null}
           );
         }}>💾 Tạo đơn hàng</Btn>
       </div>
+    </div>
+  );
+};
+
+// ── FORM TẠO / SỬA BÁO GIÁ ───────────────────────────────────────────────────
+const QuoteForm=({quote,dealers,onSave,onClose,onDel})=>{
+  const q=quote||{};
+  const [custName,setCustName]=useState(q.custName||"");
+  const [custCode,setCustCode]=useState(q.custCode||"");
+  const [custAddr,setCustAddr]=useState(q.custAddr||"");
+  const [custPhone,setCustPhone]=useState(q.custPhone||"");
+  const [deliveryAddress,setDeliveryAddress]=useState(q.deliveryAddress||"");
+  const [date,setDate]=useState(q.date||todayStr);
+  const [discountPct,setDiscountPct]=useState(q.discountPct||0);
+  const [note,setNote]=useState(q.note||"");
+  const [status,setStatus]=useState(q.status||"draft");
+  const [dealerId,setDealerId]=useState(q.dealerId||"");
+  const RETAIL_MULT=2;
+  const mkItem=m=>({mid:m.id,sku:m.code,name:m.name,unit:m.unit||"Cái",rong:"",cao:"",sobo:1,price:m.price});
+  const qtyOf=it=>it.unit==="M"?Math.round((+it.rong||0)*(+it.sobo||1)*100)/100:(+it.sobo||1);
+  const [items,setItems]=useState(()=>(q.items&&q.items.length)?q.items.map(it=>{const m=matByCode(it.sku);return{mid:m?.id||0,sku:it.sku,name:it.name,unit:it.unit||"Cái",rong:it.rong||"",cao:it.cao||"",sobo:it.sobo==null?1:it.sobo,price:it.price};}):[mkItem(LIVE_MATERIALS[0])]);
+  const setItem=(idx,k,v)=>setItems(arr=>arr.map((it,i)=>{if(i!==idx)return it;if(k==="mid"){const p=LIVE_MATERIALS.find(m=>m.id===v);return{...it,mid:v,sku:p?.code||"",name:p?.name||"",unit:p?.unit||"Cái",price:p?.price||0};}return{...it,[k]:v};}));
+  const addItem=()=>setItems(a=>[...a,mkItem(LIVE_MATERIALS[0])]);
+  const delItem=idx=>setItems(a=>a.length>1?a.filter((_,i)=>i!==idx):a);
+  const pickDealer=id=>{const d=dealers.find(x=>x.id===+id);if(d){setCustName(d.name);setCustCode(d.code||"");setCustAddr(d.region||"");setCustPhone(d.phone||"");setDealerId(d.id);}};
+  const subtotal=items.reduce((a,it)=>a+qtyOf(it)*(+it.price||0),0);
+  const discountAmt=Math.round(subtotal*(+discountPct||0)/100);
+  const grandTotal=subtotal-discountAmt;
+  const inSt={padding:"8px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",width:"100%",boxSizing:"border-box"};
+  return(
+    <div style={{display:"grid",gap:14}}>
+      <div style={{border:`1px solid ${D.s200}`,borderRadius:12,padding:14}}>
+        <div style={{fontWeight:700,fontSize:13,color:D.s900,marginBottom:10}}>👤 Thông tin khách hàng</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          <Inp label="Chọn đại lý (tự điền)" value="" onChange={pickDealer} opts={[{value:"",label:"— Chọn để tự điền —"},...dealers.map(d=>({value:d.id,label:d.name}))]}/>
+          <Inp label="Tên khách hàng" value={custName} onChange={setCustName} ph="Rèm ABC / Anh A" required/>
+          <Inp label="Mã khách hàng" value={custCode} onChange={setCustCode} ph="L-XXX"/>
+          <Inp label="Điện thoại" value={custPhone} onChange={setCustPhone}/>
+          <Inp label="Ngày báo giá" value={date} onChange={setDate} type="date"/>
+          <Inp label="Trạng thái" value={status} onChange={setStatus} opts={QUOTE_STATUS.map(s=>({value:s.id,label:s.label}))}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
+          <Inp label="Địa chỉ" value={custAddr} onChange={setCustAddr}/>
+          <Inp label="Địa chỉ giao hàng / lắp đặt" value={deliveryAddress} onChange={setDeliveryAddress} ph="(tuỳ chọn)"/>
+        </div>
+      </div>
+
+      <div style={{border:`1px solid ${D.s200}`,borderRadius:12,padding:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{fontWeight:700,fontSize:13,color:D.s900}}>📦 Vật tư báo giá</div>
+          <Btn v="ghost" sz="sm" onClick={addItem}>➕ Thêm dòng</Btn>
+        </div>
+        <div style={{display:"grid",gap:8}}>
+          {items.map((it,idx)=>{const qv=qtyOf(it);const mini={fontSize:9,fontWeight:700,color:D.s400,marginBottom:2};return(
+            <div key={idx} style={{border:`1px solid ${D.s200}`,borderRadius:10,padding:10,display:"grid",gap:8}}>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <select value={it.mid} onChange={e=>setItem(idx,"mid",+e.target.value)} style={{...inSt,flex:1}}>
+                  {LIVE_MATERIALS.map(c=><option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+                </select>
+                <button onClick={()=>delItem(idx)} title="Xoá dòng" style={{background:"none",border:"none",color:D.s300,cursor:"pointer",fontSize:20,lineHeight:1}}>×</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"50px 1fr 1fr 64px 70px 110px 110px",gap:6,alignItems:"end"}}>
+                <div><div style={mini}>ĐVT</div><div style={{fontSize:12,fontWeight:700,color:D.s700,padding:"7px 2px",textAlign:"center",background:D.s50,borderRadius:7}}>{it.unit}</div></div>
+                <div><div style={mini}>Rộng (m)</div><input type="number" step="0.01" value={it.rong} onChange={e=>setItem(idx,"rong",e.target.value)} placeholder="—" style={inSt}/></div>
+                <div><div style={mini}>Cao (m)</div><input type="number" step="0.01" value={it.cao} onChange={e=>setItem(idx,"cao",e.target.value)} placeholder="—" style={inSt}/></div>
+                <div><div style={mini}>Số bộ</div><input type="number" min="0" value={it.sobo} onChange={e=>setItem(idx,"sobo",e.target.value)} style={inSt}/></div>
+                <div><div style={mini}>SL{it.unit==="M"?" (R×bộ)":""}</div><div style={{fontSize:13,fontWeight:800,color:D.bg,padding:"7px 2px",textAlign:"center"}}>{qv}</div></div>
+                <div><div style={mini}>Giá ĐL</div><input type="number" value={it.price} onChange={e=>setItem(idx,"price",+e.target.value)} style={inSt}/></div>
+                <div><div style={mini}>Thành tiền</div><div style={{fontSize:13,fontWeight:800,color:D.s900,padding:"7px 2px",textAlign:"right"}}>{vnd(Math.round(qv*(+it.price||0)))}</div></div>
+              </div>
+              <div style={{fontSize:10,color:D.s400,textAlign:"right"}}>Giá lẻ tham khảo: {vnd(Math.round((+it.price||0)*RETAIL_MULT))}đ</div>
+            </div>
+          );})}
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:12}}>
+        <Inp label="Chiết khấu (%)" value={discountPct} onChange={v=>setDiscountPct(Math.min(100,Math.max(0,+v||0)))} type="number"/>
+        <Inp label="Ghi chú" value={note} onChange={setNote} ph="Ghi chú báo giá..."/>
+      </div>
+      <div style={{display:"grid",gap:5,justifyItems:"end",background:D.s50,borderRadius:10,padding:"12px 16px"}}>
+        <div style={{display:"flex",gap:14,fontSize:13,color:D.s600}}><span>Tổng cộng:</span><b style={{color:D.s900,minWidth:120,textAlign:"right"}}>{vnd(Math.round(subtotal))}đ</b></div>
+        {discountPct>0&&<div style={{display:"flex",gap:14,fontSize:13,color:D.gr}}><span>Chiết khấu {discountPct}%:</span><b style={{minWidth:120,textAlign:"right"}}>- {vnd(discountAmt)}đ</b></div>}
+        <div style={{display:"flex",gap:14,fontSize:16,fontWeight:900,color:D.bg}}><span>CÒN LẠI:</span><span style={{minWidth:120,textAlign:"right"}}>{vnd(Math.round(grandTotal))}đ</span></div>
+      </div>
+
+      <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+        {onDel?<Btn v="danger" sz="sm" onClick={onDel}>🗑 Xoá</Btn>:<span/>}
+        <div style={{display:"flex",gap:8}}>
+          <Btn v="ghost" onClick={onClose}>Huỷ</Btn>
+          <Btn v="gold" onClick={()=>{
+            if(!custName){alert("Cần nhập tên khách hàng");return;}
+            if(subtotal<=0){alert("Cần nhập vật tư và số lượng");return;}
+            onSave({...(quote?.id?{id:quote.id,code:quote.code}:{}),custName,custCode,custAddr,custPhone,deliveryAddress,dealerId:dealerId||"",date,discountPct:+discountPct||0,status,note,subtotal:Math.round(subtotal),total:Math.round(grandTotal),items:items.map(it=>({sku:it.sku,name:it.name,unit:it.unit||"Cái",rong:+it.rong||0,cao:+it.cao||0,sobo:it.sobo===""?1:+it.sobo,qty:qtyOf(it),price:+it.price||0}))});
+          }}>💾 Lưu báo giá</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const QuotesView=({S,dispatch,openModal,toast})=>{
+  const quotes=[...(S.quotes||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const totalVal=quotes.reduce((a,q)=>a+(q.total||0),0);
+  const wonVal=quotes.filter(q=>q.status==="won").reduce((a,q)=>a+(q.total||0),0);
+  const subOf=q=>q.subtotal!=null?q.subtotal:(q.items||[]).reduce((a,i)=>a+(+i.qty||0)*(+i.price||0),0);
+  return(
+    <div style={{display:"grid",gap:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+        <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Báo Giá</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Quản lý báo giá đã gửi khách hàng</p></div>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newQuote")} icon="➕">Tạo báo giá mới</Btn>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
+        {[{l:"Tổng báo giá",v:quotes.length,c:D.bg},{l:"Đã gửi KH",v:quotes.filter(q=>q.status==="sent").length,c:D.bl},{l:"Đã chốt",v:quotes.filter(q=>q.status==="won").length,c:D.gr},{l:"Giá trị đã chốt",v:vnd(Math.round(wonVal))+"đ",c:D.gr,small:true}].map(t=>(
+          <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+        ))}
+      </div>
+      {quotes.length===0?(
+        <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>Chưa có báo giá nào. Nhấn <b>“Tạo báo giá mới”</b> để bắt đầu.</div></Card>
+      ):(
+        <Card p={0} style={{overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr style={{background:D.bg}}>{["Số BG","Khách hàng","Ngày","Món","Tổng cộng","CÒN LẠI","Trạng thái",""].map(h=><th key={h} style={{padding:"11px 14px",textAlign:"left",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+            <tbody>
+              {quotes.map((q,ri)=>{const st=quoteStatusOf(q.status);return(
+                <tr key={q.id} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
+                  <td style={{padding:"11px 14px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:D.s700,whiteSpace:"nowrap"}}>{q.code}</td>
+                  <td style={{padding:"11px 14px"}}><div style={{fontWeight:600,fontSize:13,color:D.s900}}>{q.custName}</div><div style={{fontSize:11,color:D.s400}}>{q.custCode||""}{q.custPhone?` · ${q.custPhone}`:""}</div></td>
+                  <td style={{padding:"11px 14px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{q.date}</td>
+                  <td style={{padding:"11px 14px",fontSize:12,color:D.s600,textAlign:"center"}}>{(q.items||[]).length}</td>
+                  <td style={{padding:"11px 14px",fontSize:13,color:D.s600,whiteSpace:"nowrap"}}>{vnd(Math.round(subOf(q)))}</td>
+                  <td style={{padding:"11px 14px",fontWeight:800,fontSize:13,color:D.bg,whiteSpace:"nowrap"}}>{vnd(Math.round(q.total||subOf(q)))}</td>
+                  <td style={{padding:"11px 14px"}}>
+                    <select value={q.status} onChange={e=>dispatch({type:"UPDATE_QUOTE",id:q.id,data:{status:e.target.value}})} style={{padding:"4px 8px",borderRadius:20,border:`1px solid ${st.dot}55`,background:st.bg,color:st.dot,fontWeight:700,fontSize:11,fontFamily:"inherit",cursor:"pointer"}}>
+                      {QUOTE_STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </td>
+                  <td style={{padding:"11px 14px"}}>
+                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                      <button onClick={()=>openModal("newOrder",q)} title="Tạo đơn hàng từ báo giá (giữ vật tư + kích thước)" style={{background:D.gold,color:D.bg,border:"none",borderRadius:7,padding:"0 9px",height:28,cursor:"pointer",fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>📦 Tạo đơn</button>
+                      <button onClick={()=>printQuotePSV(q)} title="In báo giá" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🖨️</button>
+                      <button onClick={()=>openModal("editQuote",q)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
+                      <button onClick={()=>{if(confirm("Xoá báo giá?")){dispatch({type:"DEL_QUOTE",id:q.id});toast&&toast("Đã xoá báo giá","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                    </div>
+                  </td>
+                </tr>
+              );})}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// ── DANH SÁCH KHÁCH HÀNG ─────────────────────────────────────────────────────
+const CustomerForm=({customer,onSave,onClose,onDel})=>{
+  const [f,sf]=useState(customer||{code:"",name:"",phone:"",address:"",district:"",province:"",note:""});
+  const s=(k,v)=>sf(x=>({...x,[k]:v}));
+  return(
+    <div style={{display:"grid",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:12}}>
+        <Inp label="Mã khách hàng" value={f.code} onChange={v=>s("code",v)} ph="VD: L-TENKH"/>
+        <Inp label="Tên khách hàng / đại lý" value={f.name} onChange={v=>s("name",v)} ph="Rèm ABC..." required/>
+      </div>
+      <Inp label="Địa chỉ" value={f.address} onChange={v=>s("address",v)} ph="Số nhà, đường, phường/xã, quận/huyện..."/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+        <Inp label="Số điện thoại" value={f.phone} onChange={v=>s("phone",v)} ph="09xxxxxxxx"/>
+        <Inp label="Quận / Huyện" value={f.district} onChange={v=>s("district",v)}/>
+        <Inp label="Tỉnh / TP" value={f.province} onChange={v=>s("province",v)}/>
+      </div>
+      <Inp label="Ghi chú" value={f.note} onChange={v=>s("note",v)} rows={2} ph="Ghi chú về khách hàng (chính sách giá, lịch sử, lưu ý...)"/>
+      <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+        {onDel?<Btn v="danger" sz="sm" onClick={onDel}>🗑 Xoá</Btn>:<span/>}
+        <div style={{display:"flex",gap:8}}>
+          <Btn v="ghost" onClick={onClose}>Huỷ</Btn>
+          <Btn v="gold" onClick={()=>{if(!f.name){alert("Cần nhập tên khách hàng");return;}onSave(f);}}>💾 Lưu khách hàng</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CustomersView=({S,dispatch,openModal,toast})=>{
+  const customers=S.customers||[];
+  const [search,setSearch]=useState("");
+  const q=search.toLowerCase();
+  const filtered=customers.filter(c=>!q||[c.code,c.name,c.phone,c.district,c.province,c.address,c.note].some(v=>(v||"").toLowerCase().includes(q)));
+  const provinces=[...new Set(customers.map(c=>c.province).filter(Boolean))];
+  return(
+    <div style={{display:"grid",gap:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+        <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Danh Sách Khách Hàng</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>{customers.length} khách hàng · {provinces.length} tỉnh/thành</p></div>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newCustomer")} icon="➕">Tạo khách hàng mới</Btn>
+      </div>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm theo tên, mã, SĐT, tỉnh, địa chỉ..." style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${D.s200}`,fontSize:13,fontFamily:"inherit",maxWidth:420}}/>
+      {filtered.length===0?(
+        <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>{customers.length===0?<>Chưa có khách hàng. Nhấn <b>“Tạo khách hàng mới”</b>.</>:"Không tìm thấy khách hàng phù hợp."}</div></Card>
+      ):(
+        <Card p={0} style={{overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr style={{background:D.bg}}>{["#","Mã KH","Tên khách hàng","Địa chỉ","Số điện thoại","Quận/Huyện","Tỉnh/TP","Ghi chú",""].map(h=><th key={h} style={{padding:"11px 14px",textAlign:"left",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+            <tbody>
+              {filtered.map((c,ri)=>(
+                <tr key={c.id} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.s400}}>{ri+1}</td>
+                  <td style={{padding:"10px 14px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:D.s700,whiteSpace:"nowrap"}}>{c.code}</td>
+                  <td style={{padding:"10px 14px",fontWeight:600,fontSize:13,color:D.s900}}>{c.name}</td>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.s600,maxWidth:300}}>{c.address}</td>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.bg,fontWeight:700,whiteSpace:"nowrap"}}>{c.phone}</td>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{c.district}</td>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{c.province}</td>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.s500,maxWidth:240,fontStyle:c.note?"italic":"normal"}}>{c.note||"—"}</td>
+                  <td style={{padding:"10px 14px"}}>
+                    <div style={{display:"flex",gap:5}}>
+                      <button onClick={()=>openModal("editCustomer",c)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
+                      <button onClick={()=>{if(confirm(`Xoá khách hàng "${c.name}"?`)){dispatch({type:"DEL_CUSTOMER",id:c.id});toast&&toast("Đã xoá khách hàng","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// ── DANH SÁCH VẬT TƯ (quản lý) ───────────────────────────────────────────────
+const MaterialForm=({material,groups,onSave,onClose,onDel})=>{
+  const [f,sf]=useState(material||{code:"",type:"",group:groups[0]||"",name:"",desc:"",unit:"Cái",price:0,priceRetail:0,note:""});
+  const s=(k,v)=>sf(x=>({...x,[k]:v}));
+  return(
+    <div style={{display:"grid",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+        <Inp label="Mã vật tư" value={f.code} onChange={v=>s("code",v)} ph="VD: FOR-BT35" required/>
+        <Inp label="Loại (mã nhóm SP)" value={f.type} onChange={v=>s("type",v)} ph="DCF / ĐK / R..."/>
+        <Inp label="ĐVT" value={f.unit} onChange={v=>s("unit",v)} opts={["Cái","Bộ","M","Mét","Chiếc","Cuộn"]}/>
+      </div>
+      <Inp label="Tên vật tư" value={f.name} onChange={v=>s("name",v)} ph="Động cơ / Thanh ray / Phụ kiện..." required/>
+      <Inp label="Nhóm" value={f.group} onChange={v=>s("group",v)} ph="ĐỘNG CƠ VẢI - FOREST..." opts={groups.length?["",...groups]:undefined}/>
+      <Inp label="Diễn giải / Thông số" value={f.desc} onChange={v=>s("desc",v)} rows={3} ph="Điện áp, lực kéo, tải trọng..."/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Inp label="Giá đại lý (VNĐ)" value={f.price} onChange={v=>s("price",+v||0)} type="number"/>
+        <Inp label="Giá bán lẻ (VNĐ)" value={f.priceRetail} onChange={v=>s("priceRetail",+v||0)} type="number" note={!f.priceRetail&&f.price?`Gợi ý: ${vnd(f.price*2)} (×2)`:""}/>
+      </div>
+      <Inp label="Ghi chú" value={f.note} onChange={v=>s("note",v)} rows={2}/>
+      <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+        {onDel?<Btn v="danger" sz="sm" onClick={onDel}>🗑 Xoá</Btn>:<span/>}
+        <div style={{display:"flex",gap:8}}>
+          <Btn v="ghost" onClick={onClose}>Huỷ</Btn>
+          <Btn v="gold" onClick={()=>{if(!f.code||!f.name){alert("Cần nhập mã và tên vật tư");return;}onSave({...f,priceRetail:f.priceRetail||f.price*2});}}>💾 Lưu vật tư</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MaterialsView=({S,dispatch,openModal,toast})=>{
+  const materials=S.materials||MATERIALS;
+  const [search,setSearch]=useState("");
+  const [grp,setGrp]=useState("");
+  const groups=[...new Set(materials.map(m=>m.group).filter(Boolean))];
+  const q=search.toLowerCase();
+  const filtered=materials.filter(m=>(!grp||m.group===grp)&&(!q||[m.code,m.name,m.desc,m.group,m.type,m.note].some(v=>(v||"").toLowerCase().includes(q))));
+  return(
+    <div style={{display:"grid",gap:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+        <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Danh Sách Vật Tư</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>{materials.length} mã · {groups.length} nhóm — dùng chung cho Báo giá & Đơn hàng</p></div>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newMaterial")} icon="➕">Tạo vật tư mới</Btn>
+      </div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm mã, tên, diễn giải, nhóm..." style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${D.s200}`,fontSize:13,fontFamily:"inherit",flex:1,minWidth:220}}/>
+        <select value={grp} onChange={e=>setGrp(e.target.value)} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",maxWidth:340}}>
+          <option value="">Tất cả nhóm ({materials.length})</option>
+          {groups.map(g=><option key={g} value={g}>{g}</option>)}
+        </select>
+        <div style={{fontSize:12,color:D.s500,display:"flex",alignItems:"center"}}>{filtered.length} kết quả</div>
+      </div>
+      {filtered.length===0?(
+        <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>{materials.length===0?<>Chưa có vật tư. Nhấn <b>“Tạo vật tư mới”</b>.</>:"Không tìm thấy vật tư phù hợp."}</div></Card>
+      ):(
+        <Card p={0} style={{overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr style={{background:D.bg}}>{["Mã VT","Loại","Tên & diễn giải","ĐVT","Giá ĐL","Giá lẻ","Ghi chú",""].map(h=><th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+            <tbody>
+              {filtered.map((m,ri)=>(
+                <tr key={m.id} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
+                  <td style={{padding:"9px 14px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:D.s700,whiteSpace:"nowrap"}}>{m.code}</td>
+                  <td style={{padding:"9px 14px"}}><Tag label={m.type||"—"} color={D.s600} bg={D.s100}/></td>
+                  <td style={{padding:"9px 14px",maxWidth:380}}><div style={{fontWeight:600,fontSize:13,color:D.s900}}>{m.name}</div>{m.desc&&<div style={{fontSize:11,color:D.s500,marginTop:2,maxHeight:34,overflow:"hidden"}}>{m.desc.split("\n")[0]}</div>}<div style={{fontSize:10,color:D.s400,marginTop:2}}>{m.group}</div></td>
+                  <td style={{padding:"9px 14px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{m.unit}</td>
+                  <td style={{padding:"9px 14px",fontWeight:800,fontSize:13,color:D.bg,whiteSpace:"nowrap"}}>{m.price?vnd(m.price):"—"}</td>
+                  <td style={{padding:"9px 14px",fontSize:12,color:D.s400,whiteSpace:"nowrap"}}>{m.priceRetail?vnd(m.priceRetail):"—"}</td>
+                  <td style={{padding:"9px 14px",fontSize:11,color:D.s500,maxWidth:160}}>{m.note||""}</td>
+                  <td style={{padding:"9px 14px"}}>
+                    <div style={{display:"flex",gap:5}}>
+                      <button onClick={()=>openModal("editMaterial",m)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
+                      <button onClick={()=>{if(confirm(`Xoá vật tư "${m.code}"?`)){dispatch({type:"DEL_MATERIAL",id:m.id});toast&&toast("Đã xoá vật tư","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 };
@@ -2095,6 +2537,8 @@ export default function App(){
     try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(next)); } catch(e){}
     return next;
   }),[]);
+
+  LIVE_MATERIALS = (S.materials && S.materials.length) ? S.materials : MATERIALS;  // đồng bộ vật tư động cho dropdown/báo giá/đơn
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
@@ -2201,7 +2645,10 @@ export default function App(){
         })}
       </div>
     </div>,
+    customers:<CustomersView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
+    materials:<MaterialsView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
     catalog:  <CatalogView S={S} dispatch={disp} toast={toast}/>,
+    quotes:   <QuotesView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
     orders:   <OrdersView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
     tickets:  <TicketsView S={S} dispatch={disp} openModal={openModal}/>,
     installs: <InstallView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
@@ -2352,28 +2799,40 @@ export default function App(){
       {modal?.type==="editInstall"&&<Modal title={`🔧 ${modal.data?.customer}`} onClose={closeModal} wide><InstallForm install={modal.data} dealers={S.dealers} onSave={d=>{disp({type:"SAVE_INSTALL",data:d});closeModal();toast("Đã cập nhật lịch lắp");}} onClose={closeModal} onDel={()=>{if(confirm("Xoá lịch lắp đặt?")){disp({type:"DEL_INSTALL",id:modal.data.id});closeModal();toast("Đã xoá lịch lắp","danger");}}}/></Modal>}
       {modal?.type==="newDelivery"&&<Modal title="🚚 Thêm lịch giao hàng" onClose={closeModal} wide><DeliveryForm dealers={S.dealers} orders={S.orders} onSave={d=>{disp({type:"SAVE_DELIVERY",data:d});closeModal();toast("Đã thêm lịch giao hàng");}} onClose={closeModal}/></Modal>}
       {modal?.type==="editDelivery"&&<Modal title={`🚚 ${modal.data?.code}`} onClose={closeModal} wide><DeliveryForm delivery={modal.data} dealers={S.dealers} orders={S.orders} onSave={d=>{disp({type:"SAVE_DELIVERY",data:d});closeModal();toast("Đã cập nhật lịch giao");}} onClose={closeModal} onDel={()=>{if(confirm("Xoá lịch giao hàng?")){disp({type:"DEL_DELIVERY",id:modal.data.id});closeModal();toast("Đã xoá lịch giao","danger");}}}/></Modal>}
-      {modal?.type==="newOrder"&&<Modal title="💰 Tạo đơn hàng mới" onClose={closeModal} ultra><OrderForm dealers={S.dealers} onClose={closeModal} onSave={(ord,fx)=>{
+      {modal?.type==="newMaterial"&&<Modal title="🧱 Thêm vật tư mới" onClose={closeModal} wide><MaterialForm groups={[...new Set((S.materials||MATERIALS).map(m=>m.group).filter(Boolean))]} onClose={closeModal} onSave={m=>{disp({type:"SAVE_MATERIAL",data:m});closeModal();toast("✅ Đã thêm vật tư");}}/></Modal>}
+      {modal?.type==="editMaterial"&&<Modal title={`🧱 ${modal.data?.code}`} onClose={closeModal} wide><MaterialForm material={modal.data} groups={[...new Set((S.materials||MATERIALS).map(m=>m.group).filter(Boolean))]} onClose={closeModal} onSave={m=>{disp({type:"SAVE_MATERIAL",data:m});closeModal();toast("Đã cập nhật vật tư");}} onDel={()=>{if(confirm("Xoá vật tư?")){disp({type:"DEL_MATERIAL",id:modal.data.id});closeModal();toast("Đã xoá vật tư","danger");}}}/></Modal>}
+      {modal?.type==="newCustomer"&&<Modal title="👥 Thêm khách hàng mới" onClose={closeModal} wide><CustomerForm onClose={closeModal} onSave={c=>{disp({type:"SAVE_CUSTOMER",data:c});closeModal();toast("✅ Đã thêm khách hàng");}}/></Modal>}
+      {modal?.type==="editCustomer"&&<Modal title={`👥 ${modal.data?.name}`} onClose={closeModal} wide><CustomerForm customer={modal.data} onClose={closeModal} onSave={c=>{disp({type:"SAVE_CUSTOMER",data:c});closeModal();toast("Đã cập nhật khách hàng");}} onDel={()=>{if(confirm("Xoá khách hàng?")){disp({type:"DEL_CUSTOMER",id:modal.data.id});closeModal();toast("Đã xoá khách hàng","danger");}}}/></Modal>}
+      {modal?.type==="newQuote"&&<Modal title="🧾 Tạo báo giá mới" onClose={closeModal} ultra><QuoteForm dealers={S.dealers} onClose={closeModal} onSave={q=>{
+        const nums=(S.quotes||[]).map(x=>parseInt(String(x.code||"").split("-")[2])||0);
+        const code=`BG-${new Date().getFullYear()}-${String(Math.max(0,...nums)+1).padStart(3,"0")}`;
+        disp({type:"SAVE_QUOTE",data:{...q,code}});closeModal();toast(`✅ Đã tạo báo giá ${code}`);
+      }}/></Modal>}
+      {modal?.type==="editQuote"&&<Modal title={`🧾 ${modal.data?.code}`} onClose={closeModal} ultra><QuoteForm quote={modal.data} dealers={S.dealers} onClose={closeModal} onSave={q=>{disp({type:"SAVE_QUOTE",data:q});closeModal();toast("Đã cập nhật báo giá");}} onDel={()=>{if(confirm("Xoá báo giá?")){disp({type:"DEL_QUOTE",id:modal.data.id});closeModal();toast("Đã xoá báo giá","danger");}}}/></Modal>}
+      {modal?.type==="newOrder"&&<Modal title={modal.data?`💰 Tạo đơn từ báo giá ${modal.data.code}`:"💰 Tạo đơn hàng mới"} onClose={closeModal} ultra><OrderForm dealers={S.dealers} onClose={closeModal} initial={modal.data?{dealerId:modal.data.dealerId||"",date:todayStr,note:`Từ báo giá ${modal.data.code}`,discountPct:modal.data.discountPct,deliveryAddress:modal.data.deliveryAddress,items:modal.data.items}:undefined} onSave={(ord,fx)=>{
         const nums=S.orders.map(o=>parseInt(String(o.code||"").split("-")[1])||0);
         const code=`PO${new Date().getFullYear()}-${String(Math.max(0,...nums)+1).padStart(3,"0")}`;
         disp({type:"SAVE_ORDER",data:{...ord,code,fulfillment:fx.install?(fx.install.retail?"delivery_install_retail":"delivery_install"):"delivery"}});
+        if(modal.data?.id){disp({type:"UPDATE_QUOTE",id:modal.data.id,data:{status:"won"}});}
         const dl=S.dealers.find(d=>d.id===ord.dealerId);
         const product=ord.items.map(i=>`${i.sku} ×${i.qty}`).join(", ");
         const qty=ord.items.reduce((a,i)=>a+i.qty,0);
         if(fx.delivery){
-          disp({type:"SAVE_DELIVERY",data:{code:`GH-${String(Date.now()).slice(-4)}`,orderCode:code,dealerId:ord.dealerId,address:dl?.region||"",region:dl?.region||"",zone:dl?.zone||"",product,qty,carrier:fx.delivery.carrier,date:fx.delivery.date,slot:fx.delivery.slot,status:"preparing",note:`Tự tạo từ đơn ${code}`}});
+          disp({type:"SAVE_DELIVERY",data:{code:`GH-${String(Date.now()).slice(-4)}`,orderCode:code,dealerId:ord.dealerId,address:ord.deliveryAddress||dl?.region||"",region:dl?.region||"",zone:dl?.zone||"",product,qty,carrier:fx.delivery.carrier,date:fx.delivery.date,slot:fx.delivery.slot,status:"preparing",note:`Tự tạo từ đơn ${code}`}});
         }
         if(fx.install){
           const rt=fx.install.retail;
           disp({type:"SAVE_INSTALL",data:{code:`LD-${String(Date.now()).slice(-4)}`,orderCode:code,
             customer:rt?(fx.install.customer||"Khách lẻ"):(dl?.name||"Đại lý"),
             phone:rt?(fx.install.phone||""):(dl?.phone||""),
-            address:rt?(fx.install.address||""):(dl?.region||""),
+            address:rt?(fx.install.address||""):(ord.deliveryAddress||dl?.region||""),
             region:rt?(fx.install.region||dl?.region||""):(dl?.region||""),
             zone:dl?.zone||"",dealerId:ord.dealerId,product,qty,date:fx.install.date,slot:fx.install.slot,tech:fx.install.tech,status:"scheduled",
             note:rt?`Lắp cho khách lẻ của ${dl?.name||"đại lý"} — đơn ${code}`:`Lắp đặt cho đại lý — đơn ${code}`}});
         }
         closeModal();
-        toast(fx.install?(fx.install.retail?`✅ Đơn ${code} + lịch giao 🚚 + lắp khách lẻ 🏠`:`✅ Đơn ${code} + lịch giao 🚚 + lịch lắp 🔧`):`✅ Đơn ${code} + lịch giao 🚚`);
+        const fromQ=modal.data?.code?` (từ báo giá ${modal.data.code} → Đã chốt)`:"";
+        toast((fx.install?(fx.install.retail?`✅ Đơn ${code} + lịch giao 🚚 + lắp khách lẻ 🏠`:`✅ Đơn ${code} + lịch giao 🚚 + lịch lắp 🔧`):`✅ Đơn ${code} + lịch giao 🚚`)+fromQ);
       }}/></Modal>}
 
       {/* Hidden file input for import */}
@@ -2389,7 +2848,7 @@ export default function App(){
               <div>
                 <div style={{color:D.gold,fontWeight:900,fontSize:15}}>💾 Quản lý Data</div>
                 <div style={{color:"rgba(255,243,192,0.6)",fontSize:11,marginTop:3}}>
-                  {S.deals.length} deals · {S.dealers.length} đại lý · {S.tickets.length} tickets · {(S.installs||[]).length} lịch lắp · {(S.deliveries||[]).length} lịch giao
+                  {(S.customers||[]).length} khách hàng · {S.dealers.length} đại lý · {(S.quotes||[]).length} báo giá · {(S.installs||[]).length} lịch lắp · {(S.deliveries||[]).length} lịch giao
                 </div>
               </div>
               <button onClick={()=>setShowDataPanel(false)} style={{background:"rgba(255,255,255,0.08)",border:"none",color:D.gold,width:28,height:28,borderRadius:"50%",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
