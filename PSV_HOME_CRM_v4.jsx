@@ -32,6 +32,7 @@ const fmt  = n => n>=1000?`${(n/1000).toFixed(1)}tỷ`:`${n}M`;
 const vnd  = n => (n||0).toLocaleString("vi-VN");
 let LIVE_MATERIALS = MATERIALS;   // danh sách vật tư động (App đồng bộ từ state.materials)
 const matByCode = c => LIVE_MATERIALS.find(m=>m.code===c);
+const tonOf = m => (+m.opening||0)+(+m.imported||0)-(+m.exported||0);   // Tồn = Đầu kỳ + Nhập − Xuất
 const fmtK = n => n>=1000?`${(n/1000).toFixed(0)}k`:n;
 const daysDiff = s => s ? Math.floor((now-new Date(s))/86400000) : 0;
 const newId = arr => arr.length ? Math.max(...arr.map(x=>x.id))+1 : 1;
@@ -990,14 +991,36 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
   const fulfillmentOf=o=>o.fulfillment||(installs.some(i=>i.orderCode===o.code)?"delivery_install":"delivery");
   const totalDebt=dealers.reduce((a,d)=>a+(+d.debt||0),0);
   const STATUS_CFG={delivered:{label:"Đã giao",color:D.gr,bg:D.grL},processing:{label:"Đang xử lý",color:D.am,bg:D.amL},pending:{label:"Chờ xác nhận",color:D.bl,bg:D.blL},cancelled:{label:"Đã huỷ",color:D.s400,bg:D.s100}};
+  const [view,setView]=useState("list");
+  const nowM=now.getMonth()+1, nowY=now.getFullYear();
+  const [pmode,setPmode]=useState("month");
+  const yearsAvail=[...new Set(orders.map(o=>(o.date||"").slice(0,4)).filter(Boolean))].sort().reverse();
+  const [pyear,setPyear]=useState(String(yearsAvail[0]||nowY));
+  const [pmonth,setPmonth]=useState(String(nowM));
+  const [pquarter,setPquarter]=useState(String(Math.ceil(nowM/3)));
+  const selSt={padding:"6px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",fontWeight:600,cursor:"pointer"};
+  const inPeriod=o=>{ if(!o.date) return false; if(pmode==="all") return true; const y=o.date.slice(0,4), m=+o.date.slice(5,7); if(y!==pyear) return false; if(pmode==="year") return true; if(pmode==="month") return m===+pmonth; if(pmode==="quarter") return Math.ceil(m/3)===+pquarter; return true; };
+  const periodOrders=orders.filter(inPeriod);
+  const byDealer={}; periodOrders.forEach(o=>{ const d=dealers.find(x=>x.id===o.dealerId); const key=o.dealerId||o.code; if(!byDealer[key]) byDealer[key]={name:d?.name||"—",code:d?.code||"",tier:d?.tier||"",count:0,total:0,paid:0}; const g=byDealer[key]; g.count++; g.total+=(+o.total||0); g.paid+=(+o.paid||0); });
+  const dealerRows=Object.values(byDealer).map(r=>({...r,debt:r.total-r.paid})).sort((a,b)=>b.total-a.total);
+  const grand={kh:dealerRows.length,sl:periodOrders.length,total:dealerRows.reduce((a,r)=>a+r.total,0),paid:dealerRows.reduce((a,r)=>a+r.paid,0)}; grand.debt=grand.total-grand.paid;
+  const stCount=k=>periodOrders.filter(o=>(o.status||"pending")===k).length;
+  const installCnt=periodOrders.filter(o=>fulfillmentOf(o)!=="delivery").length;
+  const periodLabel=pmode==="all"?"Tất cả":pmode==="year"?`Năm ${pyear}`:pmode==="quarter"?`Quý ${pquarter}/${pyear}`:`Tháng ${pmonth}/${pyear}`;
 
   return(
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Đơn Hàng & Công Nợ</h2>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newOrder")} icon="➕">Tạo đơn hàng</Btn>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:1,borderRadius:9,overflow:"hidden",border:`1px solid ${D.s200}`}}>
+            {[["list","📋 Danh sách"],["summary","📊 Tổng hợp"]].map(([id,lb])=><button key={id} onClick={()=>setView(id)} style={{padding:"7px 16px",border:"none",background:view===id?D.bg:D.w,color:view===id?D.gold:D.s600,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{lb}</button>)}
+          </div>
+          <Btn v="gold" sz="sm" onClick={()=>openModal("newOrder")} icon="➕">Tạo đơn hàng</Btn>
+        </div>
       </div>
 
+      {view==="list"&&<>
       {/* Debt summary */}
       {totalDebt>0&&(
         <div style={{background:D.rdL,border:`1px solid ${D.rd}`,borderRadius:14,padding:18}}>
@@ -1054,7 +1077,7 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
                   <td style={{padding:"11px 14px"}}>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
                       <button onClick={()=>printOrderPO(o,dealer)} title="In đơn đặt hàng" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🖨️</button>
-                      <button onClick={()=>printOrderProduction(o,dealer)} title="In đơn sản xuất" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🏭</button>
+                      <button onClick={()=>{if(!o.stockIssued){dispatch({type:"ISSUE_PRODUCTION",id:o.id});toast&&toast(`🏭 Ra đơn SX ${o.code} — đã trừ tồn kho vật tư`);}printOrderProduction(o,dealer);}} title={o.stockIssued?"Đã ra đơn SX (đã trừ tồn) — bấm để in lại":"In đơn sản xuất (sẽ trừ tồn kho vật tư)"} style={{background:o.stockIssued?D.grL:D.s100,border:`1px solid ${o.stockIssued?D.gr:D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🏭</button>
                       {debt>0&&<Btn v="danger" sz="xs" onClick={()=>toast(`Nhắc nợ gửi đến ${dealer?.name}`,)}>Nhắc nợ</Btn>}
                     </div>
                   </td>
@@ -1064,6 +1087,61 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
           </tbody>
         </table>
       </Card>
+      </>}
+
+      {view==="summary"&&<>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",background:D.s50,borderRadius:12,padding:"12px 14px"}}>
+          <span style={{fontSize:12,fontWeight:700,color:D.s700}}>Lọc theo:</span>
+          <select value={pmode} onChange={e=>setPmode(e.target.value)} style={selSt}>
+            <option value="month">Tháng</option><option value="quarter">Quý</option><option value="year">Năm</option><option value="all">Tất cả</option>
+          </select>
+          {pmode!=="all"&&<select value={pyear} onChange={e=>setPyear(e.target.value)} style={selSt}>{(yearsAvail.length?yearsAvail:[String(nowY)]).map(y=><option key={y} value={y}>Năm {y}</option>)}</select>}
+          {pmode==="month"&&<select value={pmonth} onChange={e=>setPmonth(e.target.value)} style={selSt}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>Tháng {m}</option>)}</select>}
+          {pmode==="quarter"&&<select value={pquarter} onChange={e=>setPquarter(e.target.value)} style={selSt}>{[1,2,3,4].map(qq=><option key={qq} value={qq}>Quý {qq}</option>)}</select>}
+          <span style={{fontSize:12,color:D.s500}}>· Kỳ: <b style={{color:D.bg}}>{periodLabel}</b></span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
+          {[{l:"Khách đặt hàng",v:grand.kh,c:D.bg},{l:"Số đơn hàng",v:grand.sl,c:D.bl},{l:"Tổng tiền đơn",v:vnd(Math.round(grand.total))+"đ",c:D.am,small:true},{l:"Đã thu",v:vnd(Math.round(grand.paid))+"đ",c:D.gr,small:true},{l:"Còn nợ",v:vnd(Math.round(grand.debt))+"đ",c:grand.debt>0?D.rd:D.gr,small:true}].map(t=>(
+            <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:26,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:D.s600,padding:"0 4px"}}>
+          <span>Theo trạng thái:</span>
+          <span style={{color:D.bl,fontWeight:700}}>Chờ XN {stCount("pending")}</span>
+          <span style={{color:D.am,fontWeight:700}}>Đang xử lý {stCount("processing")}</span>
+          <span style={{color:D.gr,fontWeight:700}}>Đã giao {stCount("delivered")}</span>
+          <span style={{color:D.pu,fontWeight:700}}>· Có lắp đặt {installCnt}</span>
+        </div>
+        {dealerRows.length===0?(
+          <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>Không có đơn hàng trong kỳ <b>{periodLabel}</b>.</div></Card>
+        ):(
+          <Card p={0} style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:640}}>
+              <thead><tr style={{background:D.bg}}>{["#","Đại lý","Tier","Số đơn","Tổng tiền","Đã thu","Còn nợ"].map(h=><th key={h} style={{padding:"11px 14px",textAlign:["#","Đại lý","Tier"].includes(h)?"left":"right",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+              <tbody>
+                {dealerRows.map((r,ri)=>(
+                  <tr key={r.code||r.name+ri} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
+                    <td style={{padding:"10px 14px",fontSize:12,color:D.s400}}>{ri+1}</td>
+                    <td style={{padding:"10px 14px",fontWeight:600,fontSize:13,color:D.s900}}>{r.name}<div style={{fontSize:10,color:D.s400,fontFamily:"monospace"}}>{r.code||""}</div></td>
+                    <td style={{padding:"10px 14px"}}>{r.tier?<span style={{background:D.goldLL,color:D.bg,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800}}>{r.tier}</span>:"—"}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,fontSize:13,color:D.bl}}>{r.count}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:D.s900,whiteSpace:"nowrap"}}>{vnd(Math.round(r.total))}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontSize:12,color:D.gr,whiteSpace:"nowrap"}}>{vnd(Math.round(r.paid))}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,fontSize:13,color:r.debt>0?D.rd:D.gr,whiteSpace:"nowrap"}}>{r.debt>0?vnd(Math.round(r.debt)):"✓"}</td>
+                  </tr>
+                ))}
+                <tr style={{background:D.goldLL,borderTop:`2px solid ${D.gold}`}}>
+                  <td/><td style={{padding:"11px 14px",fontWeight:900,fontSize:13,color:D.bg}}>TỔNG CỘNG ({grand.kh} khách)</td><td/>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:14,color:D.bg}}>{grand.sl}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:14,color:D.bg,whiteSpace:"nowrap"}}>{vnd(Math.round(grand.total))}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:D.gr,whiteSpace:"nowrap"}}>{vnd(Math.round(grand.paid))}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:14,color:grand.debt>0?D.rd:D.gr,whiteSpace:"nowrap"}}>{vnd(Math.round(grand.debt))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </Card>
+        )}
+      </>}
     </div>
   );
 };
@@ -1717,6 +1795,16 @@ function reducer(state,action){
     case"DEL_CUSTOMER": return{...state,customers:(state.customers||[]).filter(x=>x.id!==action.id)};
     case"SAVE_MATERIAL": return{...state,materials:action.data.id?(state.materials||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.materials||[]),{...action.data,id:newId(state.materials||[])}]};
     case"DEL_MATERIAL": return{...state,materials:(state.materials||[]).filter(x=>x.id!==action.id)};
+    case"RESTOCK_MATERIAL": return{...state,materials:(state.materials||[]).map(x=>x.id===action.id?{...x,imported:(+x.imported||0)+(+action.qty||0)}:x)};
+    case"ISSUE_PRODUCTION": {
+      const order=(state.orders||[]).find(o=>o.id===action.id);
+      if(!order||order.stockIssued) return state;   // chỉ trừ kho 1 lần / đơn
+      const deltas={}; (order.items||[]).forEach(it=>{ if(it.sku) deltas[it.sku]=(deltas[it.sku]||0)+(+it.qty||0); });
+      const used={};
+      const materials=(state.materials||[]).map(m=>{ if(deltas[m.code]&&!used[m.code]){ used[m.code]=true; return{...m,exported:(+m.exported||0)+deltas[m.code]}; } return m; });
+      const orders=state.orders.map(o=>o.id===action.id?{...o,stockIssued:true,producedAt:todayStr}:o);
+      return{...state,materials,orders};
+    }
     case"TOGGLE_FU": return{...state,followups:state.followups.map(f=>f.id===action.id?{...f,done:!f.done}:f)};
     case"ADD_FU":    return{...state,followups:[...state.followups,{...action.data,id:newId(state.followups),done:false}]};
     case"DEL_FU":    return{...state,followups:state.followups.filter(f=>f.id!==action.id)};
@@ -1730,7 +1818,6 @@ const NAV=[
   {id:"dealers",  icon:"🤝",label:"Đại lý (B)"},
   {id:"customers",icon:"👥",label:"DS Khách hàng"},
   {id:"materials",icon:"🧱",label:"DS Vật tư"},
-  {id:"catalog",  icon:"📦",label:"Vật tư & Báo giá"},
   {id:"quotes",   icon:"🧾",label:"Báo giá"},
   {id:"orders",   icon:"💰",label:"Đơn hàng & Nợ"},
   {id:"tickets",  icon:"🎫",label:"Bảo hành & KT"},
@@ -2312,12 +2399,33 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
   const totalVal=quotes.reduce((a,q)=>a+(q.total||0),0);
   const wonVal=quotes.filter(q=>q.status==="won").reduce((a,q)=>a+(q.total||0),0);
   const subOf=q=>q.subtotal!=null?q.subtotal:(q.items||[]).reduce((a,i)=>a+(+i.qty||0)*(+i.price||0),0);
+  const totOf=q=>q.total!=null?q.total:subOf(q);
+  const [view,setView]=useState("list");
+  const nowM=now.getMonth()+1, nowY=now.getFullYear();
+  const [pmode,setPmode]=useState("month");
+  const yearsAvail=[...new Set(quotes.map(q=>(q.date||"").slice(0,4)).filter(Boolean))].sort().reverse();
+  const [pyear,setPyear]=useState(String(yearsAvail[0]||nowY));
+  const [pmonth,setPmonth]=useState(String(nowM));
+  const [pquarter,setPquarter]=useState(String(Math.ceil(nowM/3)));
+  const selSt={padding:"6px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",fontWeight:600,cursor:"pointer"};
+  const inPeriod=q=>{ if(!q.date) return false; if(pmode==="all") return true; const y=q.date.slice(0,4), m=+q.date.slice(5,7); if(y!==pyear) return false; if(pmode==="year") return true; if(pmode==="month") return m===+pmonth; if(pmode==="quarter") return Math.ceil(m/3)===+pquarter; return true; };
+  const periodQuotes=quotes.filter(inPeriod);
+  const byCust={}; periodQuotes.forEach(q=>{ const key=q.custCode||q.custName||"—"; if(!byCust[key]) byCust[key]={name:q.custName||key,code:q.custCode||"",count:0,won:0,sum:0,sub:0}; const g=byCust[key]; g.count++; if(q.status==="won")g.won++; g.sum+=totOf(q); g.sub+=subOf(q); });
+  const custRows=Object.values(byCust).sort((a,b)=>b.sum-a.sum);
+  const grand={kh:custRows.length,sl:periodQuotes.length,sum:custRows.reduce((a,c)=>a+c.sum,0),sub:custRows.reduce((a,c)=>a+c.sub,0),won:periodQuotes.filter(q=>q.status==="won").length};
+  const periodLabel=pmode==="all"?"Tất cả":pmode==="year"?`Năm ${pyear}`:pmode==="quarter"?`Quý ${pquarter}/${pyear}`:`Tháng ${pmonth}/${pyear}`;
   return(
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
-        <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Báo Giá</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Quản lý báo giá đã gửi khách hàng</p></div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newQuote")} icon="➕">Tạo báo giá mới</Btn>
+        <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Báo Giá</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Quản lý & tổng hợp báo giá khách hàng</p></div>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:1,borderRadius:9,overflow:"hidden",border:`1px solid ${D.s200}`}}>
+            {[["list","📋 Danh sách"],["summary","📊 Tổng hợp"]].map(([id,lb])=><button key={id} onClick={()=>setView(id)} style={{padding:"7px 16px",border:"none",background:view===id?D.bg:D.w,color:view===id?D.gold:D.s600,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{lb}</button>)}
+          </div>
+          <Btn v="gold" sz="sm" onClick={()=>openModal("newQuote")} icon="➕">Tạo báo giá mới</Btn>
+        </div>
       </div>
+      {view==="list"&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
         {[{l:"Tổng báo giá",v:quotes.length,c:D.bg},{l:"Đã gửi KH",v:quotes.filter(q=>q.status==="sent").length,c:D.bl},{l:"Đã chốt",v:quotes.filter(q=>q.status==="won").length,c:D.gr},{l:"Giá trị đã chốt",v:vnd(Math.round(wonVal))+"đ",c:D.gr,small:true}].map(t=>(
           <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
@@ -2357,6 +2465,54 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
           </table>
         </Card>
       )}
+      </>}
+
+      {view==="summary"&&<>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",background:D.s50,borderRadius:12,padding:"12px 14px"}}>
+          <span style={{fontSize:12,fontWeight:700,color:D.s700}}>Lọc theo:</span>
+          <select value={pmode} onChange={e=>setPmode(e.target.value)} style={selSt}>
+            <option value="month">Tháng</option><option value="quarter">Quý</option><option value="year">Năm</option><option value="all">Tất cả</option>
+          </select>
+          {pmode!=="all"&&<select value={pyear} onChange={e=>setPyear(e.target.value)} style={selSt}>{(yearsAvail.length?yearsAvail:[String(nowY)]).map(y=><option key={y} value={y}>Năm {y}</option>)}</select>}
+          {pmode==="month"&&<select value={pmonth} onChange={e=>setPmonth(e.target.value)} style={selSt}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>Tháng {m}</option>)}</select>}
+          {pmode==="quarter"&&<select value={pquarter} onChange={e=>setPquarter(e.target.value)} style={selSt}>{[1,2,3,4].map(qq=><option key={qq} value={qq}>Quý {qq}</option>)}</select>}
+          <span style={{fontSize:12,color:D.s500}}>· Kỳ: <b style={{color:D.bg}}>{periodLabel}</b></span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12}}>
+          {[{l:"Khách hàng báo giá",v:grand.kh,c:D.bg},{l:"Số lượng báo giá",v:grand.sl,c:D.bl},{l:"Đã chốt",v:grand.won,c:D.gr},{l:"Tổng tiền báo giá",v:vnd(Math.round(grand.sum))+"đ",c:D.am,small:true}].map(t=>(
+            <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?17:26,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+          ))}
+        </div>
+        {custRows.length===0?(
+          <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>Không có báo giá trong kỳ <b>{periodLabel}</b>.</div></Card>
+        ):(
+          <Card p={0} style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:560}}>
+              <thead><tr style={{background:D.bg}}>{["#","Khách hàng","Mã KH","Số báo giá","Đã chốt","Tổng cộng","Tổng tiền (còn lại)"].map(h=><th key={h} style={{padding:"11px 14px",textAlign:["Khách hàng","Mã KH","#"].includes(h)?"left":"right",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+              <tbody>
+                {custRows.map((c,ri)=>(
+                  <tr key={c.code||c.name} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
+                    <td style={{padding:"10px 14px",fontSize:12,color:D.s400}}>{ri+1}</td>
+                    <td style={{padding:"10px 14px",fontWeight:600,fontSize:13,color:D.s900}}>{c.name}</td>
+                    <td style={{padding:"10px 14px",fontFamily:"monospace",fontSize:11,color:D.s500}}>{c.code||"—"}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,fontSize:13,color:D.bl}}>{c.count}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontSize:12,color:D.gr,fontWeight:700}}>{c.won}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontSize:12,color:D.s500,whiteSpace:"nowrap"}}>{vnd(Math.round(c.sub))}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:D.bg,whiteSpace:"nowrap"}}>{vnd(Math.round(c.sum))}</td>
+                  </tr>
+                ))}
+                <tr style={{background:D.goldLL,borderTop:`2px solid ${D.gold}`}}>
+                  <td/><td style={{padding:"11px 14px",fontWeight:900,fontSize:13,color:D.bg}}>TỔNG CỘNG ({grand.kh} khách)</td><td/>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:14,color:D.bg}}>{grand.sl}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:D.gr}}>{grand.won}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:700,fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{vnd(Math.round(grand.sub))}</td>
+                  <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:14,color:D.bg,whiteSpace:"nowrap"}}>{vnd(Math.round(grand.sum))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </Card>
+        )}
+      </>}
     </div>
   );
 };
@@ -2437,8 +2593,9 @@ const CustomersView=({S,dispatch,openModal,toast})=>{
 
 // ── DANH SÁCH VẬT TƯ (quản lý) ───────────────────────────────────────────────
 const MaterialForm=({material,groups,onSave,onClose,onDel})=>{
-  const [f,sf]=useState(material||{code:"",type:"",group:groups[0]||"",name:"",desc:"",unit:"Cái",price:0,priceRetail:0,note:""});
+  const [f,sf]=useState(material||{code:"",type:"",group:groups[0]||"",name:"",desc:"",unit:"Cái",price:0,priceRetail:0,note:"",opening:0,imported:0,exported:0});
   const s=(k,v)=>sf(x=>({...x,[k]:v}));
+  const ton=(+f.opening||0)+(+f.imported||0)-(+f.exported||0);
   return(
     <div style={{display:"grid",gap:14}}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
@@ -2454,12 +2611,45 @@ const MaterialForm=({material,groups,onSave,onClose,onDel})=>{
         <Inp label="Giá bán lẻ (VNĐ)" value={f.priceRetail} onChange={v=>s("priceRetail",+v||0)} type="number" note={!f.priceRetail&&f.price?`Gợi ý: ${vnd(f.price*2)} (×2)`:""}/>
       </div>
       <Inp label="Ghi chú" value={f.note} onChange={v=>s("note",v)} rows={2}/>
+      <div style={{border:`1px solid ${D.s200}`,borderRadius:12,padding:14}}>
+        <div style={{fontWeight:700,fontSize:13,color:D.s900,marginBottom:10}}>📦 Kho — số lượng</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12,alignItems:"end"}}>
+          <Inp label="Đầu kỳ" value={f.opening} onChange={v=>s("opening",+v||0)} type="number"/>
+          <Inp label="Đã nhập" value={f.imported} onChange={v=>s("imported",+v||0)} type="number"/>
+          <Inp label="Đã xuất" value={f.exported} onChange={v=>s("exported",+v||0)} type="number"/>
+          <div><div style={{fontSize:9,fontWeight:700,color:D.s400,marginBottom:2}}>TỒN (= đầu kỳ + nhập − xuất)</div><div style={{fontSize:18,fontWeight:900,color:ton<0?D.rd:ton===0?D.am:D.gr,padding:"6px 2px",textAlign:"center"}}>{ton}</div></div>
+        </div>
+        <div style={{fontSize:11,color:D.s400,marginTop:8}}>Mỗi lần ra đơn sản xuất, số lượng vật tư sẽ tự cộng vào "Đã xuất". Dùng nút <b>📥 Nhập</b> ở danh sách để bổ sung nhanh.</div>
+      </div>
       <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
         {onDel?<Btn v="danger" sz="sm" onClick={onDel}>🗑 Xoá</Btn>:<span/>}
         <div style={{display:"flex",gap:8}}>
           <Btn v="ghost" onClick={onClose}>Huỷ</Btn>
-          <Btn v="gold" onClick={()=>{if(!f.code||!f.name){alert("Cần nhập mã và tên vật tư");return;}onSave({...f,priceRetail:f.priceRetail||f.price*2});}}>💾 Lưu vật tư</Btn>
+          <Btn v="gold" onClick={()=>{if(!f.code||!f.name){alert("Cần nhập mã và tên vật tư");return;}onSave({...f,priceRetail:f.priceRetail||f.price*2,opening:+f.opening||0,imported:+f.imported||0,exported:+f.exported||0});}}>💾 Lưu vật tư</Btn>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const RestockForm=({material,onSave,onClose})=>{
+  const [qty,setQty]=useState(0);
+  const [note,setNote]=useState("");
+  const cur=tonOf(material);
+  const after=cur+(+qty||0);
+  return(
+    <div style={{display:"grid",gap:14}}>
+      <div style={{background:D.s50,borderRadius:10,padding:"12px 14px"}}>
+        <div style={{fontWeight:800,fontSize:14,color:D.s900}}>{material.code} — {material.name}</div>
+        <div style={{fontSize:12,color:D.s500,marginTop:4}}>Tồn hiện tại: <b style={{color:cur<0?D.rd:D.s900}}>{cur}</b> {material.unit} &nbsp;·&nbsp; Đầu kỳ {(+material.opening||0)} · Nhập {(+material.imported||0)} · Xuất {(+material.exported||0)}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:12}}>
+        <Inp label={`Số lượng nhập thêm (${material.unit})`} value={qty} onChange={v=>setQty(+v||0)} type="number" note={qty>0?`Tồn sau nhập: ${after}`:""}/>
+        <Inp label="Ghi chú nhập kho" value={note} onChange={setNote} ph="Nhà cung cấp, ngày, lô hàng..."/>
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+        <Btn v="ghost" onClick={onClose}>Huỷ</Btn>
+        <Btn v="gold" onClick={()=>{if(!(+qty>0)){alert("Nhập số lượng > 0");return;}onSave(+qty);}}>📥 Nhập kho</Btn>
       </div>
     </div>
   );
@@ -2486,30 +2676,41 @@ const MaterialsView=({S,dispatch,openModal,toast})=>{
         </select>
         <div style={{fontSize:12,color:D.s500,display:"flex",alignItems:"center"}}>{filtered.length} kết quả</div>
       </div>
+      {(()=>{const moved=materials.filter(m=>(+m.opening||0)+(+m.imported||0)+(+m.exported||0)>0);const low=moved.filter(m=>tonOf(m)<=0);return(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
+          {[{l:"Tổng mã VT",v:materials.length,c:D.bg},{l:"Có phát sinh kho",v:moved.length,c:D.bl},{l:"Hết / âm tồn",v:low.length,c:low.length?D.rd:D.gr}].map(t=>(
+            <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"12px 16px"}}><div style={{fontWeight:900,fontSize:22,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+          ))}
+        </div>
+      );})()}
       {filtered.length===0?(
         <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>{materials.length===0?<>Chưa có vật tư. Nhấn <b>“Tạo vật tư mới”</b>.</>:"Không tìm thấy vật tư phù hợp."}</div></Card>
       ):(
-        <Card p={0} style={{overflow:"hidden"}}>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr style={{background:D.bg}}>{["Mã VT","Loại","Tên & diễn giải","ĐVT","Giá ĐL","Giá lẻ","Ghi chú",""].map(h=><th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+        <Card p={0} style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:1080}}>
+            <thead><tr style={{background:D.bg}}>{["Mã VT","Tên & diễn giải","ĐVT","Giá ĐL","Giá lẻ","Đầu kỳ","Nhập","Xuất","TỒN","Ghi chú",""].map(h=><th key={h} style={{padding:"10px 12px",textAlign:h==="Đầu kỳ"||h==="Nhập"||h==="Xuất"||h==="TỒN"?"center":"left",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
             <tbody>
-              {filtered.map((m,ri)=>(
+              {filtered.map((m,ri)=>{const ton=tonOf(m);return(
                 <tr key={m.id} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
-                  <td style={{padding:"9px 14px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:D.s700,whiteSpace:"nowrap"}}>{m.code}</td>
-                  <td style={{padding:"9px 14px"}}><Tag label={m.type||"—"} color={D.s600} bg={D.s100}/></td>
-                  <td style={{padding:"9px 14px",maxWidth:380}}><div style={{fontWeight:600,fontSize:13,color:D.s900}}>{m.name}</div>{m.desc&&<div style={{fontSize:11,color:D.s500,marginTop:2,maxHeight:34,overflow:"hidden"}}>{m.desc.split("\n")[0]}</div>}<div style={{fontSize:10,color:D.s400,marginTop:2}}>{m.group}</div></td>
-                  <td style={{padding:"9px 14px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{m.unit}</td>
-                  <td style={{padding:"9px 14px",fontWeight:800,fontSize:13,color:D.bg,whiteSpace:"nowrap"}}>{m.price?vnd(m.price):"—"}</td>
-                  <td style={{padding:"9px 14px",fontSize:12,color:D.s400,whiteSpace:"nowrap"}}>{m.priceRetail?vnd(m.priceRetail):"—"}</td>
-                  <td style={{padding:"9px 14px",fontSize:11,color:D.s500,maxWidth:160}}>{m.note||""}</td>
-                  <td style={{padding:"9px 14px"}}>
+                  <td style={{padding:"9px 12px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:D.s700,whiteSpace:"nowrap"}}>{m.code}</td>
+                  <td style={{padding:"9px 12px",maxWidth:340}}><div style={{fontWeight:600,fontSize:13,color:D.s900}}>{m.name}</div>{m.desc&&<div style={{fontSize:11,color:D.s500,marginTop:2,maxHeight:18,overflow:"hidden"}}>{m.desc.split("\n")[0]}</div>}<div style={{fontSize:10,color:D.s400,marginTop:2}}>{m.group}</div></td>
+                  <td style={{padding:"9px 12px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{m.unit}</td>
+                  <td style={{padding:"9px 12px",fontWeight:700,fontSize:12,color:D.bg,whiteSpace:"nowrap"}}>{m.price?vnd(m.price):"—"}</td>
+                  <td style={{padding:"9px 12px",fontSize:12,color:D.s400,whiteSpace:"nowrap"}}>{m.priceRetail?vnd(m.priceRetail):"—"}</td>
+                  <td style={{padding:"9px 12px",fontSize:12,color:D.s500,textAlign:"center"}}>{+m.opening||0}</td>
+                  <td style={{padding:"9px 12px",fontSize:12,color:D.gr,fontWeight:700,textAlign:"center"}}>{+m.imported||0}</td>
+                  <td style={{padding:"9px 12px",fontSize:12,color:D.am,fontWeight:700,textAlign:"center"}}>{+m.exported||0}</td>
+                  <td style={{padding:"9px 12px",textAlign:"center"}}><span style={{fontWeight:900,fontSize:15,color:ton<0?D.rd:ton===0?D.am:D.gr}}>{ton}</span></td>
+                  <td style={{padding:"9px 12px",fontSize:11,color:D.s500,maxWidth:160}}>{m.note||""}</td>
+                  <td style={{padding:"9px 12px"}}>
                     <div style={{display:"flex",gap:5}}>
+                      <button onClick={()=>openModal("restock",m)} title="Nhập kho (bổ sung số lượng)" style={{background:D.grL,color:D.grD,border:`1px solid ${D.gr}55`,borderRadius:7,padding:"0 8px",height:28,cursor:"pointer",fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>📥 Nhập</button>
                       <button onClick={()=>openModal("editMaterial",m)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
                       <button onClick={()=>{if(confirm(`Xoá vật tư "${m.code}"?`)){dispatch({type:"DEL_MATERIAL",id:m.id});toast&&toast("Đã xoá vật tư","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </Card>
@@ -2801,6 +3002,7 @@ export default function App(){
       {modal?.type==="editDelivery"&&<Modal title={`🚚 ${modal.data?.code}`} onClose={closeModal} wide><DeliveryForm delivery={modal.data} dealers={S.dealers} orders={S.orders} onSave={d=>{disp({type:"SAVE_DELIVERY",data:d});closeModal();toast("Đã cập nhật lịch giao");}} onClose={closeModal} onDel={()=>{if(confirm("Xoá lịch giao hàng?")){disp({type:"DEL_DELIVERY",id:modal.data.id});closeModal();toast("Đã xoá lịch giao","danger");}}}/></Modal>}
       {modal?.type==="newMaterial"&&<Modal title="🧱 Thêm vật tư mới" onClose={closeModal} wide><MaterialForm groups={[...new Set((S.materials||MATERIALS).map(m=>m.group).filter(Boolean))]} onClose={closeModal} onSave={m=>{disp({type:"SAVE_MATERIAL",data:m});closeModal();toast("✅ Đã thêm vật tư");}}/></Modal>}
       {modal?.type==="editMaterial"&&<Modal title={`🧱 ${modal.data?.code}`} onClose={closeModal} wide><MaterialForm material={modal.data} groups={[...new Set((S.materials||MATERIALS).map(m=>m.group).filter(Boolean))]} onClose={closeModal} onSave={m=>{disp({type:"SAVE_MATERIAL",data:m});closeModal();toast("Đã cập nhật vật tư");}} onDel={()=>{if(confirm("Xoá vật tư?")){disp({type:"DEL_MATERIAL",id:modal.data.id});closeModal();toast("Đã xoá vật tư","danger");}}}/></Modal>}
+      {modal?.type==="restock"&&<Modal title="📥 Nhập kho vật tư" onClose={closeModal}><RestockForm material={modal.data} onClose={closeModal} onSave={qty=>{disp({type:"RESTOCK_MATERIAL",id:modal.data.id,qty});closeModal();toast(`✅ Đã nhập +${qty} ${modal.data.unit||""} — ${modal.data.code}`);}}/></Modal>}
       {modal?.type==="newCustomer"&&<Modal title="👥 Thêm khách hàng mới" onClose={closeModal} wide><CustomerForm onClose={closeModal} onSave={c=>{disp({type:"SAVE_CUSTOMER",data:c});closeModal();toast("✅ Đã thêm khách hàng");}}/></Modal>}
       {modal?.type==="editCustomer"&&<Modal title={`👥 ${modal.data?.name}`} onClose={closeModal} wide><CustomerForm customer={modal.data} onClose={closeModal} onSave={c=>{disp({type:"SAVE_CUSTOMER",data:c});closeModal();toast("Đã cập nhật khách hàng");}} onDel={()=>{if(confirm("Xoá khách hàng?")){disp({type:"DEL_CUSTOMER",id:modal.data.id});closeModal();toast("Đã xoá khách hàng","danger");}}}/></Modal>}
       {modal?.type==="newQuote"&&<Modal title="🧾 Tạo báo giá mới" onClose={closeModal} ultra><QuoteForm dealers={S.dealers} onClose={closeModal} onSave={q=>{
