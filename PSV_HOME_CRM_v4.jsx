@@ -135,6 +135,13 @@ const QUOTES = [
   ],subtotal:2700000,total:2700000},
 ];
 
+const PAYMENT_METHODS=["Chuyển khoản","Tiền mặt","Quẹt thẻ","Bù trừ","Khác"];
+const PAYMENTS = [
+  {id:1,dealerId:1,date:dAgo(5),amount:26240,method:"Chuyển khoản",note:"TT đơn PO2026-001"},
+  {id:2,dealerId:1,date:dAgo(1),amount:34200,method:"Tiền mặt",note:"TT một phần PO2026-005"},
+  {id:3,dealerId:2,date:dAgo(4),amount:24750,method:"Chuyển khoản",note:"TT đơn PO2026-002"},
+];
+
 const SALES_TEAM = [
   {id:1,name:"Linh",role:"Sales Senior",avatar:"L",targetMonth:5,targetWeek:2,dealsWon:3,dealsActive:4,dealsLost:1,commission:8,baseCommission:0.05},
   {id:2,name:"Sales 2",role:"Sales Senior",avatar:"2",targetMonth:4,targetWeek:2,dealsWon:2,dealsActive:3,dealsLost:0,commission:6,baseCommission:0.05},
@@ -1000,7 +1007,9 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
   const [pquarter,setPquarter]=useState(String(Math.ceil(nowM/3)));
   const selSt={padding:"6px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",fontWeight:600,cursor:"pointer"};
   const inPeriod=o=>{ if(!o.date) return false; if(pmode==="all") return true; const y=o.date.slice(0,4), m=+o.date.slice(5,7); if(y!==pyear) return false; if(pmode==="year") return true; if(pmode==="month") return m===+pmonth; if(pmode==="quarter") return Math.ceil(m/3)===+pquarter; return true; };
-  const periodOrders=orders.filter(inPeriod);
+  const dealerOptions=Object.values(orders.reduce((a,o)=>{const k=o.dealerId||o.code;if(!a[k]){const d=dealers.find(x=>x.id===o.dealerId);a[k]={key:String(k),name:d?.name||"—"};}return a;},{})).sort((a,b)=>a.name.localeCompare(b.name,"vi"));
+  const [pcust,setPcust]=useState("all");
+  const periodOrders=orders.filter(o=>inPeriod(o)&&(pcust==="all"||String(o.dealerId||o.code)===pcust));
   const byDealer={}; periodOrders.forEach(o=>{ const d=dealers.find(x=>x.id===o.dealerId); const key=o.dealerId||o.code; if(!byDealer[key]) byDealer[key]={name:d?.name||"—",code:d?.code||"",tier:d?.tier||"",count:0,total:0,paid:0}; const g=byDealer[key]; g.count++; g.total+=(+o.total||0); g.paid+=(+o.paid||0); });
   const dealerRows=Object.values(byDealer).map(r=>({...r,debt:r.total-r.paid})).sort((a,b)=>b.total-a.total);
   const grand={kh:dealerRows.length,sl:periodOrders.length,total:dealerRows.reduce((a,r)=>a+r.total,0),paid:dealerRows.reduce((a,r)=>a+r.paid,0)}; grand.debt=grand.total-grand.paid;
@@ -1063,7 +1072,7 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
                   <td style={{padding:"11px 14px",fontSize:12,color:D.s600}}>{o.date}</td>
                   <td style={{padding:"11px 14px",fontSize:11,color:D.s600,maxWidth:260}}>{o.items.map((i,k)=>{const nm=i.name||matByCode(i.sku)?.name;return(<div key={k}><b style={{color:D.s700}}>{i.sku}</b>{nm?` · ${nm}`:""} ×{i.qty}</div>);})}</td>
                   <td style={{padding:"11px 14px",fontWeight:700,fontSize:13,color:D.s900}}>{o.total.toLocaleString()}</td>
-                  <td style={{padding:"11px 14px",fontWeight:700,color:D.gr,fontSize:13}}>{o.paid.toLocaleString()}</td>
+                  <td style={{padding:"8px 10px"}}><input type="number" value={o.paid} onChange={e=>dispatch({type:"UPDATE_ORDER",id:o.id,data:{paid:+e.target.value||0}})} title="Sửa số tiền đã thanh toán (đối soát công nợ)" style={{width:112,padding:"5px 7px",borderRadius:7,border:`1px solid ${D.s200}`,fontSize:12,fontWeight:700,color:D.gr,textAlign:"right",fontFamily:"inherit",background:D.w}}/></td>
                   <td style={{padding:"11px 14px",fontWeight:800,fontSize:13,color:debt>0?D.rd:D.gr}}>{debt>0?debt.toLocaleString():"✓"}</td>
                   <td style={{padding:"11px 14px"}}><Badge label={sc.label} dot={sc.color} bg={sc.bg}/></td>
                   <td style={{padding:"11px 14px"}}>
@@ -1098,6 +1107,12 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
           {pmode!=="all"&&<select value={pyear} onChange={e=>setPyear(e.target.value)} style={selSt}>{(yearsAvail.length?yearsAvail:[String(nowY)]).map(y=><option key={y} value={y}>Năm {y}</option>)}</select>}
           {pmode==="month"&&<select value={pmonth} onChange={e=>setPmonth(e.target.value)} style={selSt}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>Tháng {m}</option>)}</select>}
           {pmode==="quarter"&&<select value={pquarter} onChange={e=>setPquarter(e.target.value)} style={selSt}>{[1,2,3,4].map(qq=><option key={qq} value={qq}>Quý {qq}</option>)}</select>}
+          <span style={{width:1,height:20,background:D.s300}}/>
+          <span style={{fontSize:12,fontWeight:700,color:D.s700}}>Đại lý:</span>
+          <select value={pcust} onChange={e=>setPcust(e.target.value)} style={{...selSt,maxWidth:240}}>
+            <option value="all">Tất cả đại lý</option>
+            {dealerOptions.map(c=><option key={c.key} value={c.key}>{c.name}</option>)}
+          </select>
           <span style={{fontSize:12,color:D.s500}}>· Kỳ: <b style={{color:D.bg}}>{periodLabel}</b></span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
@@ -1743,7 +1758,7 @@ const DealForm=({deal,onSave,onClose,onDel})=>{
 // APP ROOT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const INIT_STATE={deals:DEALS,dealers:DEALERS,customers:CUSTOMERS,materials:MATERIALS,orders:ORDERS,tickets:TICKETS,installs:INSTALLS,deliveries:DELIVERIES,quotes:QUOTES,followups:FOLLOWUPS,mondayNotes:"",kpiTarget:{target:500,months:12,avgDeal:25,convRate:10}};
+const INIT_STATE={deals:DEALS,dealers:DEALERS,customers:CUSTOMERS,materials:MATERIALS,orders:ORDERS,tickets:TICKETS,installs:INSTALLS,deliveries:DELIVERIES,quotes:QUOTES,payments:PAYMENTS,followups:FOLLOWUPS,mondayNotes:"",kpiTarget:{target:500,months:12,avgDeal:25,convRate:10}};
 
 // Khi lịch lắp chuyển "done": đánh dấu đơn hoàn tất + tạo follow-up CSKH (1 lần)
 function installDone(state,it,installs){
@@ -1765,6 +1780,7 @@ function reducer(state,action){
     case"SAVE_DEALER": return{...state,dealers:action.data.id?state.dealers.map(d=>d.id===action.data.id?action.data:d):[...state.dealers,{...action.data,id:newId(state.dealers)}]};
     case"DEL_DEALER":  return{...state,dealers:state.dealers.filter(d=>d.id!==action.id)};
     case"SAVE_ORDER": return{...state,orders:action.data.id?state.orders.map(o=>o.id===action.data.id?action.data:o):[...state.orders,{...action.data,id:newId(state.orders)}]};
+    case"UPDATE_ORDER": return{...state,orders:state.orders.map(o=>o.id===action.id?{...o,...action.data}:o)};
     case"SAVE_TICKET": return{...state,tickets:action.data.id?state.tickets.map(t=>t.id===action.data.id?action.data:t):[...state.tickets,{...action.data,id:newId(state.tickets)}]};
     case"UPDATE_TICKET": return{...state,tickets:state.tickets.map(t=>t.id===action.id?{...t,...action.data}:t)};
     case"SAVE_INSTALL": {
@@ -1791,6 +1807,8 @@ function reducer(state,action){
     case"SAVE_QUOTE": return{...state,quotes:action.data.id?(state.quotes||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.quotes||[]),{...action.data,id:newId(state.quotes||[])}]};
     case"UPDATE_QUOTE": return{...state,quotes:(state.quotes||[]).map(x=>x.id===action.id?{...x,...action.data}:x)};
     case"DEL_QUOTE": return{...state,quotes:(state.quotes||[]).filter(x=>x.id!==action.id)};
+    case"SAVE_PAYMENT": return{...state,payments:action.data.id?(state.payments||[]).map(p=>p.id===action.data.id?action.data:p):[...(state.payments||[]),{...action.data,id:newId(state.payments||[])}]};
+    case"DEL_PAYMENT": return{...state,payments:(state.payments||[]).filter(p=>p.id!==action.id)};
     case"SAVE_CUSTOMER": return{...state,customers:action.data.id?(state.customers||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.customers||[]),{...action.data,id:newId(state.customers||[])}]};
     case"DEL_CUSTOMER": return{...state,customers:(state.customers||[]).filter(x=>x.id!==action.id)};
     case"SAVE_MATERIAL": return{...state,materials:action.data.id?(state.materials||[]).map(x=>x.id===action.data.id?action.data:x):[...(state.materials||[]),{...action.data,id:newId(state.materials||[])}]};
@@ -1820,6 +1838,7 @@ const NAV=[
   {id:"materials",icon:"🧱",label:"DS Vật tư"},
   {id:"quotes",   icon:"🧾",label:"Báo giá"},
   {id:"orders",   icon:"💰",label:"Đơn hàng & Nợ"},
+  {id:"payments", icon:"💵",label:"Thanh toán công nợ"},
   {id:"tickets",  icon:"🎫",label:"Bảo hành & KT"},
   {id:"installs", icon:"🔧",label:"Lịch lắp đặt"},
   {id:"deliveries",icon:"🚚",label:"Lịch giao hàng"},
@@ -2409,7 +2428,10 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
   const [pquarter,setPquarter]=useState(String(Math.ceil(nowM/3)));
   const selSt={padding:"6px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",fontWeight:600,cursor:"pointer"};
   const inPeriod=q=>{ if(!q.date) return false; if(pmode==="all") return true; const y=q.date.slice(0,4), m=+q.date.slice(5,7); if(y!==pyear) return false; if(pmode==="year") return true; if(pmode==="month") return m===+pmonth; if(pmode==="quarter") return Math.ceil(m/3)===+pquarter; return true; };
-  const periodQuotes=quotes.filter(inPeriod);
+  const custKey=q=>q.custCode||q.custName||"—";
+  const custOptions=Object.values(quotes.reduce((a,q)=>{const k=custKey(q);if(!a[k])a[k]={key:k,name:q.custName||k};return a;},{})).sort((a,b)=>a.name.localeCompare(b.name,"vi"));
+  const [pcust,setPcust]=useState("all");
+  const periodQuotes=quotes.filter(q=>inPeriod(q)&&(pcust==="all"||custKey(q)===pcust));
   const byCust={}; periodQuotes.forEach(q=>{ const key=q.custCode||q.custName||"—"; if(!byCust[key]) byCust[key]={name:q.custName||key,code:q.custCode||"",count:0,won:0,sum:0,sub:0}; const g=byCust[key]; g.count++; if(q.status==="won")g.won++; g.sum+=totOf(q); g.sub+=subOf(q); });
   const custRows=Object.values(byCust).sort((a,b)=>b.sum-a.sum);
   const grand={kh:custRows.length,sl:periodQuotes.length,sum:custRows.reduce((a,c)=>a+c.sum,0),sub:custRows.reduce((a,c)=>a+c.sub,0),won:periodQuotes.filter(q=>q.status==="won").length};
@@ -2476,6 +2498,12 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
           {pmode!=="all"&&<select value={pyear} onChange={e=>setPyear(e.target.value)} style={selSt}>{(yearsAvail.length?yearsAvail:[String(nowY)]).map(y=><option key={y} value={y}>Năm {y}</option>)}</select>}
           {pmode==="month"&&<select value={pmonth} onChange={e=>setPmonth(e.target.value)} style={selSt}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>Tháng {m}</option>)}</select>}
           {pmode==="quarter"&&<select value={pquarter} onChange={e=>setPquarter(e.target.value)} style={selSt}>{[1,2,3,4].map(qq=><option key={qq} value={qq}>Quý {qq}</option>)}</select>}
+          <span style={{width:1,height:20,background:D.s300}}/>
+          <span style={{fontSize:12,fontWeight:700,color:D.s700}}>Khách hàng:</span>
+          <select value={pcust} onChange={e=>setPcust(e.target.value)} style={{...selSt,maxWidth:240}}>
+            <option value="all">Tất cả khách hàng</option>
+            {custOptions.map(c=><option key={c.key} value={c.key}>{c.name}</option>)}
+          </select>
           <span style={{fontSize:12,color:D.s500}}>· Kỳ: <b style={{color:D.bg}}>{periodLabel}</b></span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12}}>
@@ -2719,6 +2747,147 @@ const MaterialsView=({S,dispatch,openModal,toast})=>{
   );
 };
 
+// ── THANH TOÁN CÔNG NỢ ───────────────────────────────────────────────────────
+const PaymentForm=({payment,dealers,orders,onSave,onClose,onDel})=>{
+  const [f,sf]=useState({dealerId:dealers[0]?.id||"",date:todayStr,amount:0,method:PAYMENT_METHODS[0],note:"",...(payment||{})});
+  const s=(k,v)=>sf(x=>({...x,[k]:v}));
+  const ordTotal=(orders||[]).filter(o=>o.dealerId===+f.dealerId).reduce((a,o)=>a+(+o.total||0),0);
+  return(
+    <div style={{display:"grid",gap:14}}>
+      {f.dealerId!==""&&<div style={{background:D.s50,borderRadius:10,padding:"10px 14px",fontSize:12,color:D.s600}}>Tổng đơn hàng của đại lý: <b style={{color:D.bg}}>{vnd(ordTotal)}đ</b></div>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Inp label="Đại lý / khách hàng" value={f.dealerId} onChange={v=>s("dealerId",+v)} opts={dealers.map(d=>({value:d.id,label:d.name}))}/>
+        <Inp label="Ngày thanh toán" value={f.date} onChange={v=>s("date",v)} type="date"/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Inp label="Số tiền thanh toán (VNĐ)" value={f.amount} onChange={v=>s("amount",+v||0)} type="number" required/>
+        <Inp label="Hình thức" value={f.method} onChange={v=>s("method",v)} opts={PAYMENT_METHODS}/>
+      </div>
+      <Inp label="Ghi chú" value={f.note} onChange={v=>s("note",v)} rows={2} ph="TT đơn nào, số UNC, người nộp..."/>
+      <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+        {onDel?<Btn v="danger" sz="sm" onClick={onDel}>🗑 Xoá</Btn>:<span/>}
+        <div style={{display:"flex",gap:8}}>
+          <Btn v="ghost" onClick={onClose}>Huỷ</Btn>
+          <Btn v="gold" onClick={()=>{if(!(+f.amount>0)){alert("Nhập số tiền > 0");return;}onSave({...f,dealerId:+f.dealerId,amount:+f.amount});}}>💾 Lưu thanh toán</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PaymentsView=({S,dispatch,openModal,toast})=>{
+  const {orders,dealers}=S;
+  const payments=[...(S.payments||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const dealerName=id=>(dealers.find(d=>d.id===id)||{}).name||"—";
+  const nowM=now.getMonth()+1, nowY=now.getFullYear();
+  const [pmode,setPmode]=useState("month");
+  const [pcust,setPcust]=useState("all");
+  const yearsAvail=[...new Set(payments.map(p=>(p.date||"").slice(0,4)).filter(Boolean))].sort().reverse();
+  const [pyear,setPyear]=useState(String(yearsAvail[0]||nowY));
+  const [pmonth,setPmonth]=useState(String(nowM));
+  const [pquarter,setPquarter]=useState(String(Math.ceil(nowM/3)));
+  const selSt={padding:"6px 10px",borderRadius:8,border:`1px solid ${D.s200}`,fontSize:12,fontFamily:"inherit",fontWeight:600,cursor:"pointer"};
+  const inPeriod=p=>{ if(!p.date) return false; if(pmode==="all") return true; const y=p.date.slice(0,4), m=+p.date.slice(5,7); if(y!==pyear) return false; if(pmode==="year") return true; if(pmode==="month") return m===+pmonth; if(pmode==="quarter") return Math.ceil(m/3)===+pquarter; return true; };
+  const periodLabel=pmode==="all"?"Tất cả":pmode==="year"?`Năm ${pyear}`:pmode==="quarter"?`Quý ${pquarter}/${pyear}`:`Tháng ${pmonth}/${pyear}`;
+  // Đối soát công nợ luỹ kế theo từng đại lý
+  const ids=[...new Set([...orders.map(o=>o.dealerId),...payments.map(p=>p.dealerId)])].filter(x=>x!=null);
+  const recon=ids.map(id=>{ const ord=orders.filter(o=>o.dealerId===id).reduce((a,o)=>a+(+o.total||0),0); const pay=(S.payments||[]).filter(p=>p.dealerId===id).reduce((a,p)=>a+(+p.amount||0),0); return {id,name:dealerName(id),tier:(dealers.find(d=>d.id===id)||{}).tier||"",ord,pay,bal:ord-pay}; }).sort((a,b)=>b.bal-a.bal);
+  const reconShown=pcust==="all"?recon:recon.filter(r=>String(r.id)===pcust);
+  const grand={ord:recon.reduce((a,r)=>a+r.ord,0),pay:recon.reduce((a,r)=>a+r.pay,0)}; grand.bal=grand.ord-grand.pay;
+  // Lịch sử thanh toán theo kỳ + khách
+  const periodPays=payments.filter(p=>inPeriod(p)&&(pcust==="all"||String(p.dealerId)===pcust));
+  const periodSum=periodPays.reduce((a,p)=>a+(+p.amount||0),0);
+  const selBal=pcust==="all"?grand.bal:(recon.find(r=>String(r.id)===pcust)?.bal||0);
+  const dealerOptions=recon.map(r=>({key:String(r.id),name:r.name}));
+  const stat=(bal)=>bal<=0?{l:"✓ Đã trả đủ",c:D.gr,bg:D.grL}:{l:"Còn nợ",c:D.rd,bg:D.rdL};
+  return(
+    <div style={{display:"grid",gap:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+        <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Thanh Toán Công Nợ</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Ghi nhận tiền khách trả & đối soát với đơn hàng</p></div>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newPayment")} icon="➕">Ghi nhận thanh toán</Btn>
+      </div>
+
+      <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",background:D.s50,borderRadius:12,padding:"12px 14px"}}>
+        <span style={{fontSize:12,fontWeight:700,color:D.s700}}>Lọc theo:</span>
+        <select value={pmode} onChange={e=>setPmode(e.target.value)} style={selSt}><option value="month">Tháng</option><option value="quarter">Quý</option><option value="year">Năm</option><option value="all">Tất cả</option></select>
+        {pmode!=="all"&&<select value={pyear} onChange={e=>setPyear(e.target.value)} style={selSt}>{(yearsAvail.length?yearsAvail:[String(nowY)]).map(y=><option key={y} value={y}>Năm {y}</option>)}</select>}
+        {pmode==="month"&&<select value={pmonth} onChange={e=>setPmonth(e.target.value)} style={selSt}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>Tháng {m}</option>)}</select>}
+        {pmode==="quarter"&&<select value={pquarter} onChange={e=>setPquarter(e.target.value)} style={selSt}>{[1,2,3,4].map(qq=><option key={qq} value={qq}>Quý {qq}</option>)}</select>}
+        <span style={{width:1,height:20,background:D.s300}}/>
+        <span style={{fontSize:12,fontWeight:700,color:D.s700}}>Khách hàng:</span>
+        <select value={pcust} onChange={e=>setPcust(e.target.value)} style={{...selSt,maxWidth:240}}><option value="all">Tất cả khách hàng</option>{dealerOptions.map(c=><option key={c.key} value={c.key}>{c.name}</option>)}</select>
+        <span style={{fontSize:12,color:D.s500}}>· Kỳ: <b style={{color:D.bg}}>{periodLabel}</b></span>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
+        {[{l:"Số lần thanh toán (kỳ)",v:periodPays.length,c:D.bl},{l:"Tổng đã TT (kỳ)",v:vnd(Math.round(periodSum))+"đ",c:D.gr,small:true},{l:pcust==="all"?"Tổng tiền đơn hàng":"Tổng đơn của khách",v:vnd(Math.round(pcust==="all"?grand.ord:(recon.find(r=>String(r.id)===pcust)?.ord||0)))+"đ",c:D.bg,small:true},{l:pcust==="all"?"Đã thu (luỹ kế)":"Đã thu (luỹ kế)",v:vnd(Math.round(pcust==="all"?grand.pay:(recon.find(r=>String(r.id)===pcust)?.pay||0)))+"đ",c:D.gr,small:true},{l:"CÒN NỢ",v:vnd(Math.round(selBal))+"đ",c:selBal>0?D.rd:D.gr,small:true}].map(t=>(
+          <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+        ))}
+      </div>
+
+      <div>
+        <div style={{fontWeight:800,fontSize:14,color:D.s900,marginBottom:8}}>📊 Đối soát công nợ theo khách hàng (luỹ kế)</div>
+        <Card p={0} style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:620}}>
+            <thead><tr style={{background:D.bg}}>{["#","Khách hàng","Tier","Tổng đơn hàng","Đã thanh toán","Còn nợ","Trạng thái",""].map(h=><th key={h} style={{padding:"11px 14px",textAlign:["#","Khách hàng","Tier","Trạng thái"].includes(h)||h===""?"left":"right",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+            <tbody>
+              {reconShown.map((r,ri)=>{const st=stat(r.bal);return(
+                <tr key={r.id} style={{borderBottom:`1px solid ${D.s100}`,background:r.bal>0?`${D.rdL}66`:ri%2===0?D.w:D.s50}}>
+                  <td style={{padding:"10px 14px",fontSize:12,color:D.s400}}>{ri+1}</td>
+                  <td style={{padding:"10px 14px",fontWeight:600,fontSize:13,color:D.s900}}>{r.name}</td>
+                  <td style={{padding:"10px 14px"}}>{r.tier?<span style={{background:D.goldLL,color:D.bg,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800}}>{r.tier}</span>:"—"}</td>
+                  <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,fontSize:13,color:D.s900,whiteSpace:"nowrap"}}>{vnd(Math.round(r.ord))}</td>
+                  <td style={{padding:"10px 14px",textAlign:"right",fontSize:13,color:D.gr,fontWeight:700,whiteSpace:"nowrap"}}>{vnd(Math.round(r.pay))}</td>
+                  <td style={{padding:"10px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:r.bal>0?D.rd:D.gr,whiteSpace:"nowrap"}}>{r.bal>0?vnd(Math.round(r.bal)):"0"}</td>
+                  <td style={{padding:"10px 14px"}}><span style={{background:st.bg,color:st.c,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>{st.l}</span></td>
+                  <td style={{padding:"10px 14px"}}><button onClick={()=>openModal("newPayment",{dealerId:r.id})} title="Thu tiền" style={{background:D.gold,color:D.bg,border:"none",borderRadius:7,padding:"0 9px",height:28,cursor:"pointer",fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>💵 Thu</button></td>
+                </tr>
+              );})}
+              <tr style={{background:D.goldLL,borderTop:`2px solid ${D.gold}`}}>
+                <td/><td style={{padding:"11px 14px",fontWeight:900,fontSize:13,color:D.bg}}>TỔNG CỘNG</td><td/>
+                <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:13,color:D.bg,whiteSpace:"nowrap"}}>{vnd(Math.round(reconShown.reduce((a,r)=>a+r.ord,0)))}</td>
+                <td style={{padding:"11px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:D.gr,whiteSpace:"nowrap"}}>{vnd(Math.round(reconShown.reduce((a,r)=>a+r.pay,0)))}</td>
+                <td style={{padding:"11px 14px",textAlign:"right",fontWeight:900,fontSize:14,color:reconShown.reduce((a,r)=>a+r.bal,0)>0?D.rd:D.gr,whiteSpace:"nowrap"}}>{vnd(Math.round(reconShown.reduce((a,r)=>a+r.bal,0)))}</td>
+                <td/><td/>
+              </tr>
+            </tbody>
+          </table>
+        </Card>
+      </div>
+
+      <div>
+        <div style={{fontWeight:800,fontSize:14,color:D.s900,marginBottom:8}}>🧾 Sổ thanh toán — {periodLabel}{pcust!=="all"?` · ${dealerName(+pcust)}`:""} ({periodPays.length} lần)</div>
+        {periodPays.length===0?(
+          <Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>Không có lần thanh toán nào trong kỳ. Nhấn <b>“Ghi nhận thanh toán”</b>.</div></Card>
+        ):(
+          <Card p={0} style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:560}}>
+              <thead><tr style={{background:D.bg}}>{["Ngày","Khách hàng","Số tiền","Hình thức","Ghi chú",""].map(h=><th key={h} style={{padding:"11px 14px",textAlign:h==="Số tiền"?"right":"left",fontSize:11,fontWeight:700,color:D.gold,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+              <tbody>
+                {periodPays.map((p,ri)=>(
+                  <tr key={p.id} style={{borderBottom:`1px solid ${D.s100}`,background:ri%2===0?D.w:D.s50}}>
+                    <td style={{padding:"10px 14px",fontSize:12,color:D.s600,whiteSpace:"nowrap"}}>{p.date}</td>
+                    <td style={{padding:"10px 14px",fontWeight:600,fontSize:13,color:D.s900}}>{dealerName(p.dealerId)}</td>
+                    <td style={{padding:"10px 14px",textAlign:"right",fontWeight:800,fontSize:13,color:D.gr,whiteSpace:"nowrap"}}>{vnd(Math.round(+p.amount||0))}</td>
+                    <td style={{padding:"10px 14px",fontSize:12,color:D.s600}}>{p.method||""}</td>
+                    <td style={{padding:"10px 14px",fontSize:12,color:D.s500,maxWidth:240}}>{p.note||""}</td>
+                    <td style={{padding:"10px 14px"}}>
+                      <div style={{display:"flex",gap:5}}>
+                        <button onClick={()=>openModal("editPayment",p)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
+                        <button onClick={()=>{if(confirm("Xoá lần thanh toán này?")){dispatch({type:"DEL_PAYMENT",id:p.id});toast&&toast("Đã xoá thanh toán","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ── DATA SAVE KEY (dùng cho storage artifact API) ────────────────────────────
 const SAVE_KEY = "psv_crm_data_v1";
 
@@ -2850,6 +3019,7 @@ export default function App(){
     materials:<MaterialsView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
     catalog:  <CatalogView S={S} dispatch={disp} toast={toast}/>,
     quotes:   <QuotesView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
+    payments: <PaymentsView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
     orders:   <OrdersView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
     tickets:  <TicketsView S={S} dispatch={disp} openModal={openModal}/>,
     installs: <InstallView S={S} dispatch={disp} openModal={openModal} toast={toast}/>,
@@ -3003,6 +3173,8 @@ export default function App(){
       {modal?.type==="newMaterial"&&<Modal title="🧱 Thêm vật tư mới" onClose={closeModal} wide><MaterialForm groups={[...new Set((S.materials||MATERIALS).map(m=>m.group).filter(Boolean))]} onClose={closeModal} onSave={m=>{disp({type:"SAVE_MATERIAL",data:m});closeModal();toast("✅ Đã thêm vật tư");}}/></Modal>}
       {modal?.type==="editMaterial"&&<Modal title={`🧱 ${modal.data?.code}`} onClose={closeModal} wide><MaterialForm material={modal.data} groups={[...new Set((S.materials||MATERIALS).map(m=>m.group).filter(Boolean))]} onClose={closeModal} onSave={m=>{disp({type:"SAVE_MATERIAL",data:m});closeModal();toast("Đã cập nhật vật tư");}} onDel={()=>{if(confirm("Xoá vật tư?")){disp({type:"DEL_MATERIAL",id:modal.data.id});closeModal();toast("Đã xoá vật tư","danger");}}}/></Modal>}
       {modal?.type==="restock"&&<Modal title="📥 Nhập kho vật tư" onClose={closeModal}><RestockForm material={modal.data} onClose={closeModal} onSave={qty=>{disp({type:"RESTOCK_MATERIAL",id:modal.data.id,qty});closeModal();toast(`✅ Đã nhập +${qty} ${modal.data.unit||""} — ${modal.data.code}`);}}/></Modal>}
+      {modal?.type==="newPayment"&&<Modal title="💵 Ghi nhận thanh toán" onClose={closeModal} wide><PaymentForm payment={modal.data} dealers={S.dealers} orders={S.orders} onClose={closeModal} onSave={p=>{disp({type:"SAVE_PAYMENT",data:p});closeModal();toast(`✅ Đã ghi nhận thanh toán ${vnd(p.amount)}đ`);}}/></Modal>}
+      {modal?.type==="editPayment"&&<Modal title="💵 Sửa thanh toán" onClose={closeModal} wide><PaymentForm payment={modal.data} dealers={S.dealers} orders={S.orders} onClose={closeModal} onSave={p=>{disp({type:"SAVE_PAYMENT",data:p});closeModal();toast("Đã cập nhật thanh toán");}} onDel={()=>{if(confirm("Xoá lần thanh toán này?")){disp({type:"DEL_PAYMENT",id:modal.data.id});closeModal();toast("Đã xoá thanh toán","danger");}}}/></Modal>}
       {modal?.type==="newCustomer"&&<Modal title="👥 Thêm khách hàng mới" onClose={closeModal} wide><CustomerForm onClose={closeModal} onSave={c=>{disp({type:"SAVE_CUSTOMER",data:c});closeModal();toast("✅ Đã thêm khách hàng");}}/></Modal>}
       {modal?.type==="editCustomer"&&<Modal title={`👥 ${modal.data?.name}`} onClose={closeModal} wide><CustomerForm customer={modal.data} onClose={closeModal} onSave={c=>{disp({type:"SAVE_CUSTOMER",data:c});closeModal();toast("Đã cập nhật khách hàng");}} onDel={()=>{if(confirm("Xoá khách hàng?")){disp({type:"DEL_CUSTOMER",id:modal.data.id});closeModal();toast("Đã xoá khách hàng","danger");}}}/></Modal>}
       {modal?.type==="newQuote"&&<Modal title="🧾 Tạo báo giá mới" onClose={closeModal} ultra><QuoteForm dealers={S.dealers} onClose={closeModal} onSave={q=>{
