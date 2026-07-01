@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
 import { MATERIALS, MATERIAL_GROUPS, MATERIAL_TYPES } from "./materials.js";
+import { LayoutDashboard, Workflow, Handshake, Users, Boxes, FileText, ShoppingCart, Wallet, LifeBuoy, Wrench, Truck, Trophy, Map as MapIcon, ListChecks, Sparkles, BarChart3, Coffee, Plus, Printer, Pencil, Trash2, Package, RefreshCw, ClipboardList, Ticket, AlertTriangle, ArrowLeft, Factory, Coins } from "lucide-react";
+const NAV_ICON={dashboard:LayoutDashboard,pipeline:Workflow,dealers:Handshake,customers:Users,materials:Boxes,quotes:FileText,orders:ShoppingCart,payments:Wallet,tickets:LifeBuoy,installs:Wrench,deliveries:Truck,kpi:Trophy,zone:MapIcon,followup:ListChecks,ai:Sparkles,reports:BarChart3,monday:Coffee};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DESIGN SYSTEM
@@ -217,11 +219,11 @@ const deliveryStatusOf=id=>DELIVERY_STATUS.find(s=>s.id===id)||DELIVERY_STATUS[0
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const glassCard = {
-  background:"rgba(255,255,255,0.88)",
+  background:"rgba(255,255,255,0.92)",
   backdropFilter:"blur(16px)",
   WebkitBackdropFilter:"blur(16px)",
-  border:"1px solid rgba(255,255,255,0.65)",
-  boxShadow:"0 4px 24px rgba(42,7,9,0.07), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)",
+  border:"1px solid rgba(226,232,240,0.9)",
+  boxShadow:"0 1px 2px rgba(16,24,40,0.04), 0 10px 30px -8px rgba(42,7,9,0.10), inset 0 1px 0 rgba(255,255,255,0.9)",
 };
 
 const Badge=({label,dot,bg,size="sm"})=>(
@@ -285,7 +287,9 @@ const Btn=({children,onClick,v="primary",sz="md",disabled,full,icon})=>{
         gap:7,width:full?"100%":"auto",justifyContent:"center",
         transition:"all .18s cubic-bezier(.4,0,.2,1)",
         transform:h&&!disabled?"translateY(-1px)":"none",letterSpacing:"-0.01em"}}>
-      {icon&&<span style={{fontSize:"1.05em",lineHeight:1}}>{icon}</span>}{children}
+      {icon&&(typeof icon==="string"
+        ?<span style={{fontSize:"1.05em",lineHeight:1}}>{icon}</span>
+        :(()=>{const Ic=icon;return <Ic size={sz==="xs"?13:sz==="sm"?15:sz==="lg"?18:16} strokeWidth={2.2} style={{flexShrink:0}}/>;})())}{children}
     </button>
   );
 };
@@ -400,7 +404,7 @@ const KpiTile=({icon,label,value,sub,accent=D.gold,alert,onClick,trend})=>{
         borderRadius:"20px 20px 0 0"}}/>
       <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,
         borderRadius:"50%",background:`${alert?D.rd:accent}08`,pointerEvents:"none"}}/>
-      <div style={{fontSize:24,marginBottom:10,lineHeight:1}}>{icon}</div>
+      <div style={{marginBottom:10,lineHeight:1,height:26,display:"flex",alignItems:"center"}}>{typeof icon==="string"?<span style={{fontSize:24}}>{icon}</span>:(()=>{const Ic=icon;return Ic?<Ic size={25} strokeWidth={2} color={alert?D.rd:accent}/>:null;})()}</div>
       <div style={{fontSize:9.5,color:alert?`${D.rd}bb`:D.s400,fontWeight:800,
         textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:5}}>{label}</div>
       <div style={{fontSize:32,fontWeight:900,color:alert?D.rd:D.s900,lineHeight:1,
@@ -577,14 +581,14 @@ const Dashboard=({S,dispatch,setTab,openModal,toast})=>{
 
       {/* KPI row */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(148px,1fr))",gap:12}}>
-        <KpiTile icon="🔄" label="Deal Active" value={active.length} sub={`Pipeline: ${fmt(pipeVal)}`} accent={D.bl} onClick={()=>setTab("pipeline")}/>
-        <KpiTile icon="⚠️" label="Stall >7n" value={stall.length} sub="Escalate ngay" accent={D.rd} alert={stall.length>0} onClick={()=>setTab("pipeline")}/>
-        <KpiTile icon="🏆" label="WIN tháng" value={wins.length} sub={`CR: ${deals.length?Math.round(wins.length/deals.length*100):0}%`} accent={D.gr}/>
-        <KpiTile icon="📋" label="Việc hôm nay" value={overdue.length} sub="Follow-up overdue" accent={D.am} alert={overdue.length>0} onClick={()=>setTab("followup")}/>
-        <KpiTile icon="📦" label="DS tháng này" value={`${thisMonthDS}M`} sub={`${prevMonthDS}M T.trước`} accent={D.te} trend={dsTrend}/>
-        <KpiTile icon="💰" label="Tổng nợ ĐL" value={`${totalDebt}M`} sub="Công nợ tồn đọng" accent={D.rd} alert={totalDebt>0} onClick={()=>setTab("orders")}/>
-        <KpiTile icon="🎫" label="Ticket mở" value={openTickets.length} sub="BH & kỹ thuật" accent={D.pu} alert={openTickets.filter(t=>t.priority==="high").length>0} onClick={()=>setTab("tickets")}/>
-        <KpiTile icon="🤝" label="Đại lý" value={dealers.length} sub={`${churn.length} churn risk`} accent={D.cy} alert={churn.length>0} onClick={()=>setTab("dealers")}/>
+        <KpiTile icon={RefreshCw} label="Deal Active" value={active.length} sub={`Pipeline: ${fmt(pipeVal)}`} accent={D.bl} onClick={()=>setTab("pipeline")}/>
+        <KpiTile icon={AlertTriangle} label="Stall >7n" value={stall.length} sub="Escalate ngay" accent={D.rd} alert={stall.length>0} onClick={()=>setTab("pipeline")}/>
+        <KpiTile icon={Trophy} label="WIN tháng" value={wins.length} sub={`CR: ${deals.length?Math.round(wins.length/deals.length*100):0}%`} accent={D.gr}/>
+        <KpiTile icon={ClipboardList} label="Việc hôm nay" value={overdue.length} sub="Follow-up overdue" accent={D.am} alert={overdue.length>0} onClick={()=>setTab("followup")}/>
+        <KpiTile icon={Package} label="DS tháng này" value={`${thisMonthDS}M`} sub={`${prevMonthDS}M T.trước`} accent={D.te} trend={dsTrend}/>
+        <KpiTile icon={Coins} label="Tổng nợ ĐL" value={`${totalDebt}M`} sub="Công nợ tồn đọng" accent={D.rd} alert={totalDebt>0} onClick={()=>setTab("orders")}/>
+        <KpiTile icon={Ticket} label="Ticket mở" value={openTickets.length} sub="BH & kỹ thuật" accent={D.pu} alert={openTickets.filter(t=>t.priority==="high").length>0} onClick={()=>setTab("tickets")}/>
+        <KpiTile icon={Handshake} label="Đại lý" value={dealers.length} sub={`${churn.length} churn risk`} accent={D.cy} alert={churn.length>0} onClick={()=>setTab("dealers")}/>
       </div>
 
       {/* Charts */}
@@ -704,7 +708,7 @@ const PipelineView=({S,dispatch,openModal})=>{
             {opts.map(o=><option key={o}>{o}</option>)}
           </select>
         ))}
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newDeal")} icon="➕">Deal mới</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newDeal")} icon={Plus}>Deal mới</Btn>
       </div>
 
       {/* Stats bar */}
@@ -912,7 +916,7 @@ const CatalogView=({S,dispatch,toast})=>{
           </Card>
 
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:16}}>
-            <Btn v="ghost" sz="sm" onClick={()=>setTab("catalog")} icon="←">Thêm vật tư</Btn>
+            <Btn v="ghost" sz="sm" onClick={()=>setTab("catalog")} icon={ArrowLeft}>Thêm vật tư</Btn>
             <Card style={{border:`2px solid ${D.gold}`,minWidth:320}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <span style={{fontWeight:800,fontSize:14,color:D.bg}}>Tổng báo giá (VNĐ)</span>
@@ -924,14 +928,14 @@ const CatalogView=({S,dispatch,toast})=>{
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:17,fontWeight:900,color:D.bg,borderTop:`2px solid ${D.gold}`,paddingTop:8}}><span>CÒN LẠI</span><span>{vnd(Math.round(quoteTotal))}đ</span></div>
               </div>
               <div style={{marginTop:14,display:"grid",gap:8}}>
-                <Btn v="gold" full onClick={printQuote} icon="🖨️" disabled={!quoteItems.length}>In BÁO GIÁ (mẫu PSV)</Btn>
+                <Btn v="gold" full onClick={printQuote} icon={Printer} disabled={!quoteItems.length}>In BÁO GIÁ (mẫu PSV)</Btn>
                 <Btn v="outline" full disabled={!quoteItems.length} onClick={()=>{
                   const nums=(S.quotes||[]).map(x=>parseInt(String(x.code||"").split("-")[2])||0);
                   const code=`BG-${new Date().getFullYear()}-${String(Math.max(0,...nums)+1).padStart(3,"0")}`;
                   dispatch({type:"SAVE_QUOTE",data:{code,date:qDate,custName:qName,custCode:qCode,custAddr:qAddr,custPhone:qPhone,deliveryAddress:qDeliv,dealerId:"",discountPct:+qDiscount||0,status:"draft",note:"",subtotal:Math.round(quoteSub),total:Math.round(quoteTotal),items:quoteItems.map(it=>({sku:it.code,name:it.name,unit:it.unit||"Cái",rong:+it.rong||0,cao:+it.cao||0,sobo:it.sobo===""?1:+it.sobo,qty:qtyOf(it),price:it.price}))}});
                   toast&&toast(`✅ Đã lưu vào mục Báo giá (${code})`);
                 }}>💾 Lưu vào mục Báo giá</Btn>
-                <Btn v="ghost" full onClick={()=>{setQI([]);toast&&toast("Đã xoá báo giá");}} icon="🗑️">Xoá & làm mới</Btn>
+                <Btn v="ghost" full onClick={()=>{setQI([]);toast&&toast("Đã xoá báo giá");}} icon={Trash2}>Xoá & làm mới</Btn>
               </div>
             </Card>
           </div>
@@ -1025,7 +1029,7 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
           <div style={{display:"flex",gap:1,borderRadius:9,overflow:"hidden",border:`1px solid ${D.s200}`}}>
             {[["list","📋 Danh sách"],["summary","📊 Tổng hợp"]].map(([id,lb])=><button key={id} onClick={()=>setView(id)} style={{padding:"7px 16px",border:"none",background:view===id?D.bg:D.w,color:view===id?D.gold:D.s600,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{lb}</button>)}
           </div>
-          <Btn v="gold" sz="sm" onClick={()=>openModal("newOrder")} icon="➕">Tạo đơn hàng</Btn>
+          <Btn v="gold" sz="sm" onClick={()=>openModal("newOrder")} icon={Plus}>Tạo đơn hàng</Btn>
         </div>
       </div>
 
@@ -1085,8 +1089,8 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
                   </td>
                   <td style={{padding:"11px 14px"}}>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                      <button onClick={()=>printOrderPO(o,dealer)} title="In đơn đặt hàng" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🖨️</button>
-                      <button onClick={()=>{if(!o.stockIssued){dispatch({type:"ISSUE_PRODUCTION",id:o.id});toast&&toast(`🏭 Ra đơn SX ${o.code} — đã trừ tồn kho vật tư`);}printOrderProduction(o,dealer);}} title={o.stockIssued?"Đã ra đơn SX (đã trừ tồn) — bấm để in lại":"In đơn sản xuất (sẽ trừ tồn kho vật tư)"} style={{background:o.stockIssued?D.grL:D.s100,border:`1px solid ${o.stockIssued?D.gr:D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🏭</button>
+                      <button onClick={()=>printOrderPO(o,dealer)} title="In đơn đặt hàng" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}><Printer size={15} style={{verticalAlign:"middle"}}/></button>
+                      <button onClick={()=>{if(!o.stockIssued){dispatch({type:"ISSUE_PRODUCTION",id:o.id});toast&&toast(`🏭 Ra đơn SX ${o.code} — đã trừ tồn kho vật tư`);}printOrderProduction(o,dealer);}} title={o.stockIssued?"Đã ra đơn SX (đã trừ tồn) — bấm để in lại":"In đơn sản xuất (sẽ trừ tồn kho vật tư)"} style={{background:o.stockIssued?D.grL:D.s100,border:`1px solid ${o.stockIssued?D.gr:D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}><Factory size={15} style={{verticalAlign:"middle"}}/></button>
                       {debt>0&&<Btn v="danger" sz="xs" onClick={()=>toast(`Nhắc nợ gửi đến ${dealer?.name}`,)}>Nhắc nợ</Btn>}
                     </div>
                   </td>
@@ -1117,7 +1121,7 @@ const OrdersView=({S,dispatch,openModal,toast})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
           {[{l:"Khách đặt hàng",v:grand.kh,c:D.bg},{l:"Số đơn hàng",v:grand.sl,c:D.bl},{l:"Tổng tiền đơn",v:vnd(Math.round(grand.total))+"đ",c:D.am,small:true},{l:"Đã thu",v:vnd(Math.round(grand.paid))+"đ",c:D.gr,small:true},{l:"Còn nợ",v:vnd(Math.round(grand.debt))+"đ",c:grand.debt>0?D.rd:D.gr,small:true}].map(t=>(
-            <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:26,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+            <div key={t.l} className="psv-lift" style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:26,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
           ))}
         </div>
         <div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:D.s600,padding:"0 4px"}}>
@@ -1177,7 +1181,7 @@ const TicketsView=({S,dispatch,openModal})=>{
           <h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Chăm sóc sau bán & Bảo hành</h2>
           <p style={{margin:"4px 0 0",fontSize:13,color:D.s400}}>{tickets.filter(t=>t.status!=="resolved").length} ticket chưa đóng · {tickets.filter(t=>t.priority==="high"&&t.status!=="resolved").length} khẩn cấp</p>
         </div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newTicket")} icon="➕">Tạo ticket</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newTicket")} icon={Plus}>Tạo ticket</Btn>
       </div>
 
       {/* Stats */}
@@ -1624,7 +1628,7 @@ const ReportsView=({S})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Báo cáo & Analytics</h2>
-        <Btn v="gold" sz="sm" onClick={printReport} icon="🖨️">Xuất báo cáo BGĐ</Btn>
+        <Btn v="gold" sz="sm" onClick={printReport} icon={Printer}>Xuất báo cáo BGĐ</Btn>
       </div>
 
       {/* MoM comparison */}
@@ -2011,11 +2015,11 @@ const InstallView=({S,dispatch,openModal,toast})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Lịch Lắp Đặt</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Quản lý lịch hẹn lắp đặt motor & rèm tự động</p></div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newInstall")} icon="➕">Thêm lịch lắp</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newInstall")} icon={Plus}>Thêm lịch lắp</Btn>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
         {[{l:"Quá hẹn",n:overdue.length,c:D.rd,bg:D.rdL},{l:"Hôm nay",n:today.length,c:D.am,bg:D.amL},{l:"Sắp tới",n:upcoming.length,c:D.bl,bg:D.blL},{l:"Hoàn thành",n:done.length,c:D.gr,bg:D.grL}].map(t=>(
-          <div key={t.l} style={{background:t.bg,border:`1px solid ${t.c}33`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:26,color:t.c}}>{t.n}</div><div style={{fontSize:12,fontWeight:700,color:D.s700,marginTop:2}}>{t.l}</div></div>
+          <div key={t.l} className="psv-lift" style={{background:t.bg,border:`1px solid ${t.c}33`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:26,color:t.c}}>{t.n}</div><div style={{fontSize:12,fontWeight:700,color:D.s700,marginTop:2}}>{t.l}</div></div>
         ))}
       </div>
       {installs.length===0&&<Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>Chưa có lịch lắp đặt nào. Nhấn <b>“Thêm lịch lắp”</b> để bắt đầu.</div></Card>}
@@ -2111,11 +2115,11 @@ const DeliveryView=({S,dispatch,openModal,toast})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Lịch Giao Hàng</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Quản lý lịch giao đơn hàng cho đại lý & công trình</p></div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newDelivery")} icon="➕">Thêm lịch giao</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newDelivery")} icon={Plus}>Thêm lịch giao</Btn>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
         {[{l:"Quá hẹn",n:overdue.length,c:D.rd,bg:D.rdL},{l:"Hôm nay",n:today.length,c:D.am,bg:D.amL},{l:"Sắp tới",n:upcoming.length,c:D.bl,bg:D.blL},{l:"Đã giao",n:delivered.length,c:D.gr,bg:D.grL}].map(t=>(
-          <div key={t.l} style={{background:t.bg,border:`1px solid ${t.c}33`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:26,color:t.c}}>{t.n}</div><div style={{fontSize:12,fontWeight:700,color:D.s700,marginTop:2}}>{t.l}</div></div>
+          <div key={t.l} className="psv-lift" style={{background:t.bg,border:`1px solid ${t.c}33`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:26,color:t.c}}>{t.n}</div><div style={{fontSize:12,fontWeight:700,color:D.s700,marginTop:2}}>{t.l}</div></div>
         ))}
       </div>
       {deliveries.length===0&&<Card><div style={{textAlign:"center",color:D.s400,padding:30,fontSize:14}}>Chưa có lịch giao hàng nào. Nhấn <b>“Thêm lịch giao”</b> để bắt đầu.</div></Card>}
@@ -2444,13 +2448,13 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
           <div style={{display:"flex",gap:1,borderRadius:9,overflow:"hidden",border:`1px solid ${D.s200}`}}>
             {[["list","📋 Danh sách"],["summary","📊 Tổng hợp"]].map(([id,lb])=><button key={id} onClick={()=>setView(id)} style={{padding:"7px 16px",border:"none",background:view===id?D.bg:D.w,color:view===id?D.gold:D.s600,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{lb}</button>)}
           </div>
-          <Btn v="gold" sz="sm" onClick={()=>openModal("newQuote")} icon="➕">Tạo báo giá mới</Btn>
+          <Btn v="gold" sz="sm" onClick={()=>openModal("newQuote")} icon={Plus}>Tạo báo giá mới</Btn>
         </div>
       </div>
       {view==="list"&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
         {[{l:"Tổng báo giá",v:quotes.length,c:D.bg},{l:"Đã gửi KH",v:quotes.filter(q=>q.status==="sent").length,c:D.bl},{l:"Đã chốt",v:quotes.filter(q=>q.status==="won").length,c:D.gr},{l:"Giá trị đã chốt",v:vnd(Math.round(wonVal))+"đ",c:D.gr,small:true}].map(t=>(
-          <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+          <div key={t.l} className="psv-lift" style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
         ))}
       </div>
       {quotes.length===0?(
@@ -2476,9 +2480,9 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
                   <td style={{padding:"11px 14px"}}>
                     <div style={{display:"flex",gap:5,alignItems:"center"}}>
                       <button onClick={()=>openModal("newOrder",q)} title="Tạo đơn hàng từ báo giá (giữ vật tư + kích thước)" style={{background:D.gold,color:D.bg,border:"none",borderRadius:7,padding:"0 9px",height:28,cursor:"pointer",fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>📦 Tạo đơn</button>
-                      <button onClick={()=>printQuotePSV(q)} title="In báo giá" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}>🖨️</button>
-                      <button onClick={()=>openModal("editQuote",q)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
-                      <button onClick={()=>{if(confirm("Xoá báo giá?")){dispatch({type:"DEL_QUOTE",id:q.id});toast&&toast("Đã xoá báo giá","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                      <button onClick={()=>printQuotePSV(q)} title="In báo giá" style={{background:D.bg,color:D.gold,border:"none",borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:14}}><Printer size={15} style={{verticalAlign:"middle"}}/></button>
+                      <button onClick={()=>openModal("editQuote",q)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}><Pencil size={15} style={{verticalAlign:"middle"}}/></button>
+                      <button onClick={()=>{if(confirm("Xoá báo giá?")){dispatch({type:"DEL_QUOTE",id:q.id});toast&&toast("Đã xoá báo giá","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}><Trash2 size={15} style={{verticalAlign:"middle"}}/></button>
                     </div>
                   </td>
                 </tr>
@@ -2508,7 +2512,7 @@ const QuotesView=({S,dispatch,openModal,toast})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12}}>
           {[{l:"Khách hàng báo giá",v:grand.kh,c:D.bg},{l:"Số lượng báo giá",v:grand.sl,c:D.bl},{l:"Đã chốt",v:grand.won,c:D.gr},{l:"Tổng tiền báo giá",v:vnd(Math.round(grand.sum))+"đ",c:D.am,small:true}].map(t=>(
-            <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?17:26,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+            <div key={t.l} className="psv-lift" style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?17:26,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
           ))}
         </div>
         {custRows.length===0?(
@@ -2583,7 +2587,7 @@ const CustomersView=({S,dispatch,openModal,toast})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Danh Sách Khách Hàng</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>{customers.length} khách hàng · {provinces.length} tỉnh/thành</p></div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newCustomer")} icon="➕">Tạo khách hàng mới</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newCustomer")} icon={Plus}>Tạo khách hàng mới</Btn>
       </div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm theo tên, mã, SĐT, tỉnh, địa chỉ..." style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${D.s200}`,fontSize:13,fontFamily:"inherit",maxWidth:420}}/>
       {filtered.length===0?(
@@ -2605,8 +2609,8 @@ const CustomersView=({S,dispatch,openModal,toast})=>{
                   <td style={{padding:"10px 14px",fontSize:12,color:D.s500,maxWidth:240,fontStyle:c.note?"italic":"normal"}}>{c.note||"—"}</td>
                   <td style={{padding:"10px 14px"}}>
                     <div style={{display:"flex",gap:5}}>
-                      <button onClick={()=>openModal("editCustomer",c)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
-                      <button onClick={()=>{if(confirm(`Xoá khách hàng "${c.name}"?`)){dispatch({type:"DEL_CUSTOMER",id:c.id});toast&&toast("Đã xoá khách hàng","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                      <button onClick={()=>openModal("editCustomer",c)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}><Pencil size={15} style={{verticalAlign:"middle"}}/></button>
+                      <button onClick={()=>{if(confirm(`Xoá khách hàng "${c.name}"?`)){dispatch({type:"DEL_CUSTOMER",id:c.id});toast&&toast("Đã xoá khách hàng","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}><Trash2 size={15} style={{verticalAlign:"middle"}}/></button>
                     </div>
                   </td>
                 </tr>
@@ -2694,7 +2698,7 @@ const MaterialsView=({S,dispatch,openModal,toast})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Danh Sách Vật Tư</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>{materials.length} mã · {groups.length} nhóm — dùng chung cho Báo giá & Đơn hàng</p></div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newMaterial")} icon="➕">Tạo vật tư mới</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newMaterial")} icon={Plus}>Tạo vật tư mới</Btn>
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm mã, tên, diễn giải, nhóm..." style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${D.s200}`,fontSize:13,fontFamily:"inherit",flex:1,minWidth:220}}/>
@@ -2707,7 +2711,7 @@ const MaterialsView=({S,dispatch,openModal,toast})=>{
       {(()=>{const moved=materials.filter(m=>(+m.opening||0)+(+m.imported||0)+(+m.exported||0)>0);const low=moved.filter(m=>tonOf(m)<=0);return(
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12}}>
           {[{l:"Tổng mã VT",v:materials.length,c:D.bg},{l:"Có phát sinh kho",v:moved.length,c:D.bl},{l:"Hết / âm tồn",v:low.length,c:low.length?D.rd:D.gr}].map(t=>(
-            <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"12px 16px"}}><div style={{fontWeight:900,fontSize:22,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+            <div key={t.l} className="psv-lift" style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"12px 16px"}}><div style={{fontWeight:900,fontSize:22,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
           ))}
         </div>
       );})()}
@@ -2733,8 +2737,8 @@ const MaterialsView=({S,dispatch,openModal,toast})=>{
                   <td style={{padding:"9px 12px"}}>
                     <div style={{display:"flex",gap:5}}>
                       <button onClick={()=>openModal("restock",m)} title="Nhập kho (bổ sung số lượng)" style={{background:D.grL,color:D.grD,border:`1px solid ${D.gr}55`,borderRadius:7,padding:"0 8px",height:28,cursor:"pointer",fontSize:11,fontWeight:800,whiteSpace:"nowrap"}}>📥 Nhập</button>
-                      <button onClick={()=>openModal("editMaterial",m)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
-                      <button onClick={()=>{if(confirm(`Xoá vật tư "${m.code}"?`)){dispatch({type:"DEL_MATERIAL",id:m.id});toast&&toast("Đã xoá vật tư","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                      <button onClick={()=>openModal("editMaterial",m)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}><Pencil size={15} style={{verticalAlign:"middle"}}/></button>
+                      <button onClick={()=>{if(confirm(`Xoá vật tư "${m.code}"?`)){dispatch({type:"DEL_MATERIAL",id:m.id});toast&&toast("Đã xoá vật tư","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}><Trash2 size={15} style={{verticalAlign:"middle"}}/></button>
                     </div>
                   </td>
                 </tr>
@@ -2804,7 +2808,7 @@ const PaymentsView=({S,dispatch,openModal,toast})=>{
     <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <div><h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Thanh Toán Công Nợ</h2><p style={{margin:"4px 0 0",color:D.s400,fontSize:13}}>Ghi nhận tiền khách trả & đối soát với đơn hàng</p></div>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newPayment")} icon="➕">Ghi nhận thanh toán</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newPayment")} icon={Plus}>Ghi nhận thanh toán</Btn>
       </div>
 
       <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",background:D.s50,borderRadius:12,padding:"12px 14px"}}>
@@ -2821,7 +2825,7 @@ const PaymentsView=({S,dispatch,openModal,toast})=>{
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
         {[{l:"Số lần thanh toán (kỳ)",v:periodPays.length,c:D.bl},{l:"Tổng đã TT (kỳ)",v:vnd(Math.round(periodSum))+"đ",c:D.gr,small:true},{l:pcust==="all"?"Tổng tiền đơn hàng":"Tổng đơn của khách",v:vnd(Math.round(pcust==="all"?grand.ord:(recon.find(r=>String(r.id)===pcust)?.ord||0)))+"đ",c:D.bg,small:true},{l:pcust==="all"?"Đã thu (luỹ kế)":"Đã thu (luỹ kế)",v:vnd(Math.round(pcust==="all"?grand.pay:(recon.find(r=>String(r.id)===pcust)?.pay||0)))+"đ",c:D.gr,small:true},{l:"CÒN NỢ",v:vnd(Math.round(selBal))+"đ",c:selBal>0?D.rd:D.gr,small:true}].map(t=>(
-          <div key={t.l} style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
+          <div key={t.l} className="psv-lift" style={{background:D.w,border:`1px solid ${D.s200}`,borderRadius:12,padding:"14px 16px"}}><div style={{fontWeight:900,fontSize:t.small?16:24,color:t.c}}>{t.v}</div><div style={{fontSize:12,fontWeight:700,color:D.s500,marginTop:2}}>{t.l}</div></div>
         ))}
       </div>
 
@@ -2873,8 +2877,8 @@ const PaymentsView=({S,dispatch,openModal,toast})=>{
                     <td style={{padding:"10px 14px",fontSize:12,color:D.s500,maxWidth:240}}>{p.note||""}</td>
                     <td style={{padding:"10px 14px"}}>
                       <div style={{display:"flex",gap:5}}>
-                        <button onClick={()=>openModal("editPayment",p)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}>✏️</button>
-                        <button onClick={()=>{if(confirm("Xoá lần thanh toán này?")){dispatch({type:"DEL_PAYMENT",id:p.id});toast&&toast("Đã xoá thanh toán","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}>🗑</button>
+                        <button onClick={()=>openModal("editPayment",p)} title="Sửa" style={{background:D.s100,border:`1px solid ${D.s200}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13}}><Pencil size={15} style={{verticalAlign:"middle"}}/></button>
+                        <button onClick={()=>{if(confirm("Xoá lần thanh toán này?")){dispatch({type:"DEL_PAYMENT",id:p.id});toast&&toast("Đã xoá thanh toán","danger");}}} title="Xoá" style={{background:"none",border:`1px solid ${D.rdL}`,borderRadius:7,width:30,height:28,cursor:"pointer",fontSize:13,color:D.rd}}><Trash2 size={15} style={{verticalAlign:"middle"}}/></button>
                       </div>
                     </td>
                   </tr>
@@ -2925,14 +2929,32 @@ export default function App(){
     el.id=id;
     el.textContent=[
       "*{box-sizing:border-box}",
-      "::-webkit-scrollbar{width:6px;height:6px}",
+      "html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}",
+      "::selection{background:rgba(245,197,66,0.35);color:#2A0709}",
+      "::-webkit-scrollbar{width:11px;height:11px}",
       "::-webkit-scrollbar-track{background:transparent}",
-      "::-webkit-scrollbar-thumb{background:rgba(42,7,9,0.15);border-radius:99px}",
-      "::-webkit-scrollbar-thumb:hover{background:rgba(42,7,9,0.3)}",
-      "@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}",
+      "::-webkit-scrollbar-thumb{background:rgba(42,7,9,0.16);border-radius:99px;border:3px solid transparent;background-clip:padding-box}",
+      "::-webkit-scrollbar-thumb:hover{background:rgba(42,7,9,0.32);background-clip:padding-box}",
+      // Số căn cột đều (tiền/VNĐ/số lượng) cho dữ liệu CRM
+      "table,input[type=number],.tnum{font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}",
+      // Bảng: hover sáng nhẹ + header dính khi cuộn
+      "tbody tr{transition:background-color .13s ease}",
+      "tbody tr:hover{background:rgba(245,197,66,0.08)}",
+      "thead th{position:sticky;top:0;z-index:3;background:#2A0709;box-shadow:0 1px 0 rgba(245,197,66,0.15)}",
+      // Nút/select: phản hồi nhấn mượt
+      "button,select{transition:filter .15s ease,box-shadow .15s ease,transform .1s ease}",
+      "button:not(:disabled):active{transform:scale(.97)}",
+      // Thẻ KPI/thống kê: hover nhấc nhẹ
+      ".psv-lift{transition:transform .18s cubic-bezier(.16,1,.3,1),box-shadow .18s ease}",
+      ".psv-lift:hover{transform:translateY(-3px);box-shadow:0 14px 30px -10px rgba(42,7,9,0.20)}",
+      // Focus bàn phím rõ ràng (a11y)
+      "button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid rgba(245,197,66,0.95);outline-offset:2px;border-radius:9px}",
+      "@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}",
       "@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:0.4}}",
-      ".psv-view{animation:fadeSlideIn .22s cubic-bezier(.4,0,.2,1)}",
-    ].join(" ");
+      ".psv-view{animation:fadeSlideIn .26s cubic-bezier(.16,1,.3,1)}",
+      // Tôn trọng người dùng tắt hiệu ứng chuyển động
+      "@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}",
+    ].join("\n");
     document.head.appendChild(el);
     return ()=>{};
   },[]);
@@ -2989,7 +3011,7 @@ export default function App(){
     dealers:  <div style={{display:"grid",gap:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
         <h2 style={{margin:0,fontSize:20,fontWeight:900,color:D.s900}}>Quản lý Đại Lý (Pipeline B)</h2>
-        <Btn v="gold" sz="sm" onClick={()=>openModal("newDealer")} icon="➕">Thêm đại lý</Btn>
+        <Btn v="gold" sz="sm" onClick={()=>openModal("newDealer")} icon={Plus}>Thêm đại lý</Btn>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:14}}>
         {S.dealers.map(d=>{
@@ -3038,8 +3060,9 @@ export default function App(){
 
   return(
     <div style={{display:"flex",minHeight:"100vh",
-      background:`linear-gradient(135deg,#F0EEF8 0%,#EDF2F7 40%,#F5F0EC 100%)`,
-      fontFamily:"'Segoe UI',system-ui,-apple-system,sans-serif",color:D.s900}}>
+      background:`radial-gradient(1100px 520px at 100% -6%, rgba(245,197,66,0.08), transparent 60%), radial-gradient(880px 480px at -6% 106%, rgba(42,7,9,0.05), transparent 55%), linear-gradient(180deg,#FCFCFD 0%,#F2F3F6 100%)`,
+      backgroundAttachment:"fixed",
+      fontFamily:"Inter,'Segoe UI',system-ui,-apple-system,sans-serif",color:D.s900}}>
 
       {/* ── PREMIUM SIDEBAR ──────────────────────────────────────────────────── */}
       <div style={{
@@ -3106,9 +3129,9 @@ export default function App(){
                 {active&&!collapsed&&<div style={{position:"absolute",left:0,top:"20%",bottom:"20%",
                   width:3,borderRadius:99,
                   background:`linear-gradient(180deg,${D.gold},${D.goldM})`}}/>}
-                <span style={{fontSize:16,flexShrink:0,
-                  filter:active?"drop-shadow(0 0 6px rgba(245,197,66,0.4))":"none",
-                  transition:"filter .2s"}}>{n.icon}</span>
+                {(()=>{const Ic=NAV_ICON[n.id];return Ic
+                  ?<Ic size={18} strokeWidth={active?2.4:1.9} style={{flexShrink:0,filter:active?"drop-shadow(0 0 5px rgba(245,197,66,0.45))":"none",transition:"all .2s"}}/>
+                  :<span style={{fontSize:16,flexShrink:0}}>{n.icon}</span>;})()}
                 {!collapsed&&<span style={{flex:1}}>{n.label}</span>}
                 {hasAlert&&<span style={{
                   width:7,height:7,borderRadius:"50%",flexShrink:0,
